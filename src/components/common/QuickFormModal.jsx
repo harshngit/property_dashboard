@@ -34,7 +34,7 @@ export default function QuickFormModal({ open, onClose, onSubmit, title, descrip
             f.type === "select" ? (
               <SelectField key={f.key} label={f.label} options={f.options} value={form[f.key] ?? ""} onChange={set(f.key)} className={f.full ? "sm:col-span-2" : ""} />
             ) : (
-              <TextField key={f.key} label={f.label} placeholder={f.placeholder} value={form[f.key] ?? ""} onChange={set(f.key)} className={f.full ? "sm:col-span-2" : ""} />
+              <TextField key={f.key} type={f.type || "text"} label={f.label} placeholder={f.placeholder} value={form[f.key] ?? ""} onChange={set(f.key)} className={f.full ? "sm:col-span-2" : ""} />
             )
           )}
         </div>

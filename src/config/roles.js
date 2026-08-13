@@ -4,7 +4,8 @@ export const ROLES = {
   AGENCY_ADMIN: "agency_admin",
   BROKER: "broker",
   BUILDER: "builder",
-  SALES: "sales",
+  SALES: "internal_sales",
+  CUSTOMER: "customer",
 };
 
 export const ROLE_LABELS = {
@@ -14,6 +15,7 @@ export const ROLE_LABELS = {
   [ROLES.BROKER]: "Broker / Agent",
   [ROLES.BUILDER]: "Builder / Developer",
   [ROLES.SALES]: "Internal Sales",
+  [ROLES.CUSTOMER]: "Customer",
 };
 
 export const ROLE_BADGE_CLASS = {
@@ -23,6 +25,7 @@ export const ROLE_BADGE_CLASS = {
   [ROLES.BROKER]: "bg-coral-500 text-white",
   [ROLES.BUILDER]: "bg-amber-500 text-white",
   [ROLES.SALES]: "bg-indigo-400 text-white",
+  [ROLES.CUSTOMER]: "bg-teal-500 text-white",
 };
 
 // Module keys used across nav + permission checks
@@ -64,6 +67,7 @@ export const ROLE_ACCESS = {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.PROPERTIES, MODULES.CUSTOMERS,
       MODULES.BROKERS, MODULES.DEALS, MODULES.DOCUMENTS, MODULES.TASKS, MODULES.REPORTS,
+      MODULES.USERS,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: true },
   },
@@ -84,6 +88,10 @@ export const ROLE_ACCESS = {
       MODULES.DEALS, MODULES.TASKS, MODULES.DOCUMENTS,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: false },
+  },
+  [ROLES.CUSTOMER]: {
+    modules: [MODULES.DASHBOARD],
+    actions: { create: false, edit: false, delete: false, approve: false, export: false },
   },
 };
 

@@ -5,36 +5,27 @@ import { LuMail, LuLock, LuLogIn, LuEye, LuEyeOff } from "react-icons/lu";
 import AuthLayout from "../../layouts/AuthLayout";
 import { loginUser, clearAuthError } from "../../redux/slices/authSlice";
 import { InlineSpinner } from "../../components/common/PageLoader";
-import { ROLES, ROLE_LABELS } from "../../config/roles";
-import { MOCK_USERS } from "../../data/mockData";
-
-const DEMO_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.AGENCY_ADMIN, ROLES.BROKER, ROLES.BUILDER, ROLES.SALES];
 
 export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { status, error, user } = useSelector((s) => s.auth);
-  const [form, setForm] = useState({ email: "", password: "", role: ROLES.BROKER });
+  const { status, error, user, accessToken } = useSelector((s) => s.auth);
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [showPw, setShowPw] = useState(false);
 
   useEffect(() => () => dispatch(clearAuthError()), [dispatch]);
 
   useEffect(() => {
-    if (user) {
+    if (user && accessToken) {
       const dest = location.state?.from?.pathname || "/app/dashboard";
       navigate(dest, { replace: true });
     }
-  }, [user, navigate, location]);
+  }, [user, accessToken, navigate, location]);
 
   const submit = (e) => {
     e.preventDefault();
     dispatch(loginUser(form));
-  };
-
-  const fillDemo = (role) => {
-    const demo = MOCK_USERS.find((u) => u.role === role);
-    setForm({ email: demo.email, password: "demo1234", role });
   };
 
   return (
@@ -47,34 +38,14 @@ export default function Login() {
 
       <form onSubmit={submit} className="mt-7 space-y-4">
         <div>
-          <label className="field-label">Sign in as</label>
-          <div className="grid grid-cols-3 gap-2">
-            {DEMO_ROLES.map((r) => (
-              <button
-                type="button"
-                key={r}
-                onClick={() => setForm((f) => ({ ...f, role: r }))}
-                className={`rounded-lg border px-2 py-2 text-[11px] font-semibold transition-all ${
-                  form.role === r
-                    ? "border-red-500 bg-red-50 text-red-700"
-                    : "border-line bg-white text-ink-500 hover:border-indigo-200"
-                }`}
-              >
-                {ROLE_LABELS[r]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="field-label">Email address</label>
+          <label className="field-label">Email or mobile number</label>
           <div className="relative">
             <LuMail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
             <input
-              type="email" required placeholder="you@propertyserch.com"
+              type="text" required placeholder="you@propertyserch.com or 9876543210"
               className="field-input pl-10"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              value={form.identifier}
+              onChange={(e) => setForm((f) => ({ ...f, identifier: e.target.value }))}
             />
           </div>
         </div>
@@ -100,9 +71,6 @@ export default function Login() {
             <input type="checkbox" className="h-3.5 w-3.5 rounded border-line text-red-500 focus:ring-red-500" />
             Remember me
           </label>
-          <button type="button" onClick={() => fillDemo(form.role)} className="font-semibold text-red-600 hover:text-red-700">
-            Autofill demo login
-          </button>
         </div>
 
         {error && (
@@ -120,10 +88,6 @@ export default function Login() {
       <p className="mt-6 text-center text-sm text-ink-500">
         New to PropertySerch?{" "}
         <Link to="/register" className="font-semibold text-red-600 hover:text-red-700">Create an account</Link>
-      </p>
-
-      <p className="mt-4 rounded-xl bg-surface-sunk px-3.5 py-2.5 text-center text-[11px] text-ink-500">
-        Demo tip: pick a role above, tap "Autofill demo login", then Sign in.
       </p>
     </AuthLayout>
   );

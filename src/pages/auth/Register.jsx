@@ -1,25 +1,27 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { LuUser, LuMail, LuLock, LuBuilding, LuUserPlus } from "react-icons/lu";
+import { LuUser, LuMail, LuPhone, LuLock, LuUserPlus, LuCircleCheck } from "react-icons/lu";
 import AuthLayout from "../../layouts/AuthLayout";
-import { registerUser, clearAuthError } from "../../redux/slices/authSlice";
+import { registerUser, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { ROLES, ROLE_LABELS } from "../../config/roles";
+
+const SELF_SERVICE_ROLES = [ROLES.BROKER, ROLES.CUSTOMER];
 
 export default function Register() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { status, error, user } = useSelector((s) => s.auth);
+  const { status, error, registeredUser } = useSelector((s) => s.auth);
   const [form, setForm] = useState({
-    name: "", email: "", password: "", confirm: "", role: ROLES.BROKER, agency: "",
+    fullName: "", email: "", mobile: "", password: "", confirm: "", role: ROLES.BROKER,
   });
   const [touched, setTouched] = useState(false);
 
-  useEffect(() => () => dispatch(clearAuthError()), [dispatch]);
   useEffect(() => {
-    if (user) navigate("/app/dashboard", { replace: true });
-  }, [user, navigate]);
+    dispatch(clearAuthError());
+    dispatch(clearRegisteredUser());
+  }, [dispatch]);
 
   const mismatch = touched && form.confirm && form.confirm !== form.password;
 
@@ -29,6 +31,31 @@ export default function Register() {
     if (form.password !== form.confirm) return;
     dispatch(registerUser(form));
   };
+
+  if (registeredUser) {
+    return (
+      <AuthLayout
+        panelTitle="Set up your team in minutes, not weeks."
+        panelSubtitle="Role-based access for admins, agencies, brokers, builders and sales — from day one."
+      >
+        <div className="flex flex-col items-center py-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <LuCircleCheck className="h-7 w-7" />
+          </div>
+          <h1 className="mt-4 font-display text-2xl font-extrabold text-ink-950">Account created</h1>
+          <p className="mt-1.5 text-sm text-ink-500">
+            Welcome, {registeredUser.name}. You can now sign in with your email or mobile number.
+          </p>
+          <button
+            onClick={() => navigate("/login", { replace: true })}
+            className="btn-primary mt-6 w-full"
+          >
+            Go to sign in
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout
@@ -44,38 +71,50 @@ export default function Register() {
           <div className="relative">
             <LuUser className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
             <input required placeholder="Jane Doe" className="field-input pl-10"
-              value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-          </div>
-        </div>
-
-        <div>
-          <label className="field-label">Work email</label>
-          <div className="relative">
-            <LuMail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
-            <input type="email" required placeholder="you@company.com" className="field-input pl-10"
-              value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="field-label">Role</label>
-            <select
-              className="field-select"
-              value={form.role}
-              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-            >
-              {Object.values(ROLES).map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="field-label">Agency / Company</label>
+            <label className="field-label">Email</label>
             <div className="relative">
-              <LuBuilding className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
-              <input placeholder="Optional" className="field-input pl-10"
-                value={form.agency} onChange={(e) => setForm((f) => ({ ...f, agency: e.target.value }))} />
+              <LuMail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
+              <input type="email" required placeholder="you@company.com" className="field-input pl-10"
+                value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
           </div>
+          <div>
+            <label className="field-label">Mobile number</label>
+            <div className="relative">
+              <LuPhone className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
+              <input type="tel" required placeholder="9876543210" className="field-input pl-10"
+                value={form.mobile} onChange={(e) => setForm((f) => ({ ...f, mobile: e.target.value }))} />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="field-label">Register as</label>
+          <div className="grid grid-cols-2 gap-2">
+            {SELF_SERVICE_ROLES.map((r) => (
+              <button
+                type="button"
+                key={r}
+                onClick={() => setForm((f) => ({ ...f, role: r }))}
+                className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-all ${
+                  form.role === r
+                    ? "border-red-500 bg-red-50 text-red-700"
+                    : "border-line bg-white text-ink-500 hover:border-indigo-200"
+                }`}
+              >
+                {ROLE_LABELS[r]}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-ink-500">
+            Agency, builder and internal roles are added by an existing admin from Users settings.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -83,7 +122,7 @@ export default function Register() {
             <label className="field-label">Password</label>
             <div className="relative">
               <LuLock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500/60" />
-              <input type="password" required minLength={4} placeholder="••••••••" className="field-input pl-10"
+              <input type="password" required minLength={8} placeholder="••••••••" className="field-input pl-10"
                 value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} />
             </div>
           </div>
