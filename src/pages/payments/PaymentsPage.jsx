@@ -3,7 +3,6 @@ import { LuEye, LuRefreshCw, LuWallet } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
 import StatusBadge from "../../components/common/StatusBadge";
-import StatCard from "../../components/common/StatCard";
 import { useToast } from "../../components/common/ToastProvider";
 
 const PAYMENTS = [
@@ -15,7 +14,7 @@ const PAYMENTS = [
 
 export default function PaymentsPage() {
   const toast = useToast();
-  const [rows] = useState(PAYMENTS);
+  const [rows, setRows] = useState(PAYMENTS);
 
   const columns = [
     { key: "id", label: "Transaction" },
@@ -32,6 +31,21 @@ export default function PaymentsPage() {
     { label: "Re-check status", icon: LuRefreshCw, onClick: () => toast.push(`Refreshing status for ${row.id}…`, "info") },
   ];
 
+  const handleKanbanDrop = (row, status) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, status } : item
+    )));
+    toast.push(`${row.id} moved to ${status}.`, "success");
+  };
+
+  const parseAmount = (amount) => Number(String(amount).replace(/[^\d]/g, "")) || 0;
+  const paymentStats = [
+    { label: "Total Payments", value: rows.length, meta: "all transactions" },
+    { label: "Collected", value: `₹${(rows.filter((row) => row.status === "Active").reduce((sum, row) => sum + parseAmount(row.amount), 0) / 100000).toFixed(1)}L`, meta: "active receipts" },
+    { label: "Pending Approval", value: rows.filter((row) => row.status === "Pending Approval").length, meta: "awaiting confirmation" },
+    { label: "Inactive", value: rows.filter((row) => row.status === "Inactive").length, meta: "failed or archived" },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -39,17 +53,28 @@ export default function PaymentsPage() {
         title="Payments"
         subtitle="Transaction and milestone history across every active deal."
       />
-      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Collected (MTD)" value="₹32.5 L" delta="+18%" tone="up" index={0} />
-        <StatCard label="Pending Approval" value="₹10.5 L" delta="1 transaction" tone="warn" index={1} />
-        <StatCard label="Failed / Retried" value="₹0" delta="All clear" tone="flat" index={2} />
-      </div>
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={paymentStats}
         searchKeys={["customer", "id", "deal"]}
         filters={[{ key: "status", label: "Status", options: ["Active", "Pending Approval", "Inactive"] }]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <p className="font-semibold text-ink-900">{r.id}</p>
+            <p className="mt-1 text-xs text-ink-500">{r.customer} • {r.deal}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.status} />
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>{r.milestone}</p>
+              <p>{r.amount} • {r.date}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "status", columns: ["Active", "Pending Approval", "Inactive"] }}
+        onKanbanDrop={handleKanbanDrop}
         emptyTitle="No payments recorded"
         emptySubtitle="Payment attempts and statuses will appear here once initiated."
       />

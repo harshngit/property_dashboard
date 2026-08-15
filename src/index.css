@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand-gradient-start: #ff512f;
+    --brand-gradient-end: #dd2476;
+  }
   html, body, #root {
     height: 100%;
   }
@@ -34,10 +38,14 @@
            transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none select-none;
   }
   .btn-primary {
-    @apply btn bg-red-600 text-white shadow-card hover:bg-red-700 active:scale-[0.98];
+    @apply btn text-white shadow-card active:scale-[0.98];
+    background-image: linear-gradient(135deg, var(--brand-gradient-start) 0%, var(--brand-gradient-end) 100%);
+    box-shadow: 0 14px 28px -14px rgba(221, 36, 118, 0.5);
   }
   .btn-accent {
-    @apply btn bg-indigo-600 text-white shadow-card hover:bg-indigo-700 active:scale-[0.98];
+    @apply btn text-white shadow-card active:scale-[0.98];
+    background-image: linear-gradient(135deg, var(--brand-gradient-start) 0%, var(--brand-gradient-end) 100%);
+    box-shadow: 0 14px 28px -14px rgba(221, 36, 118, 0.5);
   }
   .btn-ghost {
     @apply btn bg-transparent text-ink-700 hover:bg-surface-sunk;
@@ -46,7 +54,9 @@
     @apply btn border border-line bg-white text-ink-700 hover:border-red-300 hover:text-red-600;
   }
   .btn-danger {
-    @apply btn bg-coral-500 text-white hover:bg-coral-600;
+    @apply btn text-white active:scale-[0.98];
+    background-image: linear-gradient(135deg, var(--brand-gradient-start) 0%, var(--brand-gradient-end) 100%);
+    box-shadow: 0 14px 28px -14px rgba(221, 36, 118, 0.5);
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
@@ -57,15 +67,30 @@
   }
 
   .field-label {
-    @apply block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5;
+    @apply mb-1.5 block text-[12px] font-semibold text-[#1D1D1F];
   }
   .field-input {
     @apply w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink-900
            placeholder:text-ink-500/60 outline-none transition-all duration-150
            focus:border-red-500 focus:ring-4 focus:ring-red-500/10;
   }
+  .auth-field {
+    @apply rounded-2xl border-[#D8D8DF] bg-white px-5 py-2.5 text-[13px] text-[#44444F]
+           shadow-[0_1px_0_rgba(17,20,43,0.04)] focus:border-red-500 focus:bg-white focus:ring-red-500/10;
+  }
+  .auth-submit {
+    @apply min-h-[42px] rounded-2xl text-[13px] text-white;
+    background-image: linear-gradient(135deg, var(--brand-gradient-start) 0%, var(--brand-gradient-end) 100%);
+    box-shadow: 0 14px 28px -12px rgba(221, 36, 118, 0.45);
+  }
+  .auth-panel-title {
+    @apply mt-3 font-display text-[27px] font-extrabold tracking-[-0.03em] text-ink-950 sm:text-[30px];
+  }
+  .auth-panel-copy {
+    @apply mt-2 max-w-[420px] text-[12px] leading-5 text-ink-500;
+  }
   .field-error {
-    @apply mt-1 text-xs font-medium text-coral-600;
+    @apply mt-1 text-[11px] font-medium text-coral-600;
   }
   .field-select {
     @apply field-input appearance-none bg-no-repeat pr-9;
@@ -84,20 +109,24 @@
   .badge-inactive { @apply badge bg-ink-900/5 text-ink-500; }
 
   .table-wrap {
-    @apply overflow-x-auto rounded-2xl border border-line bg-white shadow-card;
+    @apply overflow-x-auto rounded-[28px] border border-line bg-white shadow-card;
   }
   .table-base {
     @apply w-full border-collapse text-sm;
   }
   .table-base thead th {
-    @apply sticky top-0 z-10 bg-surface-muted/95 backdrop-blur px-4 py-3 text-left text-[11px]
-           font-bold uppercase tracking-wider text-ink-500 border-b border-line whitespace-nowrap;
+    @apply sticky top-0 z-10 bg-[#FBFCFE] px-6 py-4 text-left text-[12px]
+           font-semibold tracking-normal text-[#9AA3B2] border-b border-[#ECEEF4] whitespace-nowrap;
   }
   .table-base tbody td {
-    @apply px-4 py-3.5 border-b border-line/70 text-ink-700 align-middle;
+    @apply px-6 py-4 border-b border-[#ECEEF4] text-[15px] text-[#2F3445] align-middle;
   }
   .table-base tbody tr {
-    @apply transition-colors hover:bg-red-50/40;
+    @apply transition-colors hover:bg-[#FFF9F8];
+  }
+  .table-base th:not(:last-child),
+  .table-base td:not(:last-child) {
+    @apply border-r border-[#ECEEF4];
   }
 
   .skeleton {
@@ -112,7 +141,8 @@
            transition-all duration-150 hover:bg-surface-sunk hover:text-ink-900;
   }
   .sidebar-link-active {
-    @apply sidebar-link bg-red-50 text-red-600 hover:bg-red-50 hover:text-red-600;
+    @apply sidebar-link text-white hover:text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)];
+    background-image: linear-gradient(90deg, var(--brand-gradient-start) 0%, var(--brand-gradient-end) 100%);
   }
 }
 

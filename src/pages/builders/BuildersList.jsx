@@ -49,20 +49,50 @@ export default function BuildersList() {
     setModalOpen(false);
   };
 
+  const handleKanbanDrop = (row, status) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, status } : item
+    )));
+    toast.push(`${row.name} moved to ${status}.`, "success");
+  };
+
+  const builderStats = [
+    { label: "Total Builders", value: rows.length, meta: "partner developers" },
+    { label: "Active Builders", value: rows.filter((row) => row.status === "Active").length, meta: "currently enabled" },
+    { label: "Projects", value: rows.reduce((sum, row) => sum + Number(row.projects || 0), 0), meta: "live portfolios" },
+    { label: "Total Units", value: rows.reduce((sum, row) => sum + Number(row.units || 0), 0), meta: "builder inventory" },
+  ];
+
   return (
     <div>
       <PageHeader
         eyebrow="Builder Management"
         title="Builders"
         subtitle="Manage builder projects, units and inquiry allocation."
-        actions={permissions.create && <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add builder</button>}
       />
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={builderStats}
+        toolbarActions={permissions.create ? <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add builder</button> : undefined}
         searchKeys={["name", "city", "id"]}
         filters={[{ key: "status", label: "Status", options: ["Active", "Inactive"] }]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <p className="font-semibold text-ink-900">{r.name}</p>
+            <p className="mt-1 text-xs text-ink-500">{r.id} • {r.city}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.status} />
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>Projects: {r.projects}</p>
+              <p>Total units: {r.units}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "status", columns: ["Active", "Inactive"] }}
+        onKanbanDrop={permissions.edit ? handleKanbanDrop : undefined}
         emptyTitle="No builders yet"
         emptySubtitle="Builders you onboard can manage their own projects and units."
       />

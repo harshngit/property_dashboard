@@ -1,110 +1,50 @@
 import { motion } from "framer-motion";
 
-const BUILDINGS = [
-  { w: 34, h: 90, x: 10, delay: 0.05, color: "#232F55" },
-  { w: 46, h: 140, x: 50, delay: 0.15, color: "#2B3A67" },
-  { w: 30, h: 70, x: 104, delay: 0.02, color: "#1B2542" },
-  { w: 54, h: 176, x: 142, delay: 0.22, color: "#2B3A67" },
-  { w: 36, h: 110, x: 204, delay: 0.1, color: "#232F55" },
-  { w: 44, h: 150, x: 248, delay: 0.28, color: "#1B2542" },
-  { w: 30, h: 84, x: 300, delay: 0.06, color: "#2B3A67" },
-  { w: 50, h: 130, x: 338, delay: 0.18, color: "#232F55" },
-];
-
-function Skyline() {
+export default function AuthLayout({ children, panelTitle, panelSubtitle, panelEyebrow = "Real estate CRM" }) {
   return (
-    <svg viewBox="0 0 400 200" className="w-full max-w-md">
-      <defs>
-        <linearGradient id="skyfade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F87171" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#F87171" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="196" width="400" height="4" fill="#F87171" opacity="0.35" />
-      {BUILDINGS.map((b, i) => (
-        <motion.g key={i}>
-          <motion.rect
-            x={b.x} width={b.w} fill={b.color} rx="3"
-            initial={{ height: 0, y: 200 }}
-            animate={{ height: b.h, y: 200 - b.h }}
-            transition={{ duration: 0.9, delay: b.delay, ease: [0.22, 1, 0.36, 1] }}
-          />
-          {/* windows */}
-          {Array.from({ length: Math.floor(b.h / 22) }).map((_, wi) => (
-            <motion.rect
-              key={wi}
-              x={b.x + 7} y={200 - b.h + 12 + wi * 22}
-              width={6} height={8} fill="#F87171"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 0.4, 1] }}
-              transition={{ duration: 2.4, delay: b.delay + 0.6 + wi * 0.15, repeat: Infinity, repeatDelay: 2 }}
-            />
-          ))}
-        </motion.g>
-      ))}
-    </svg>
-  );
-}
+    <div className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(255,81,47,0.14),_transparent_30%),linear-gradient(180deg,_rgba(255,81,47,0.08)_0%,_rgba(221,36,118,0.10)_100%)] px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
+      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-7xl overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_35px_100px_-45px_rgba(24,31,66,0.35)] backdrop-blur sm:min-h-[calc(100vh-2rem)]">
+        <div className="relative hidden w-[46%] overflow-hidden p-3 lg:flex">
+          <div className="relative flex h-full w-full flex-col justify-between overflow-hidden rounded-[2rem] bg-[url('/loginbg.jpg')] bg-cover bg-center">
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,81,47,0.06)_26%,rgba(221,36,118,0.16)_70%,rgba(255,255,255,0.02)_100%)]" />
 
-export default function AuthLayout({ children, panelTitle, panelSubtitle }) {
-  return (
-    <div className="flex min-h-screen bg-surface-muted">
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-800 to-indigo-950 px-12 py-10 text-white lg:flex">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-red-500/10 blur-3xl" />
-        <div className="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-coral-500/10 blur-3xl" />
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="relative z-10 px-6 pt-6 xl:px-7 xl:pt-7"
+            >
+              <svg viewBox="0 0 24 24" className="h-9 w-9 fill-white xl:h-11 xl:w-11">
+                <path d="M10.67 2h2.66v6.08L18.6 5.05l1.33 2.31-5.27 3.03 5.27 3.03-1.33 2.31-5.27-3.03V19h-2.66v-6.33L5.4 15.7l-1.33-2.31 5.27-3.03-5.27-3.03L5.4 5.05l5.27 3.03V2Z" />
+              </svg>
+            </motion.div>
 
-        <div className="relative z-10 flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600">
-            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5 fill-white"><path d="M6 20V11l6-4.5 6 4.5v9h-4v-5H10v5z" /></svg>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08 }}
+              className="relative z-10 max-w-[320px] px-6 pb-7 xl:max-w-[380px] xl:px-7 xl:pb-8"
+            >
+              <p className="text-[15px] font-medium tracking-[-0.02em] text-white/92 xl:text-[16px]">
+                You can easily
+              </p>
+              <h2 className="mt-3 font-body text-[24px] font-semibold leading-[1.15] tracking-[-0.04em] text-white xl:mt-5 xl:text-[29px]">
+                Get access your personal hub for clarity and productivity
+              </h2>
+            </motion.div>
           </div>
-          <span className="font-display text-lg font-extrabold">PropertySerch</span>
         </div>
 
-        <div className="relative z-10">
-          <motion.h2
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="font-display text-3xl font-extrabold leading-snug text-white"
-          >
-            {panelTitle || "Every listing, lead and deal — one operating system."}
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
-            className="mt-3 max-w-sm text-sm text-indigo-100/80"
-          >
-            {panelSubtitle || "From first inquiry to final handover, built for brokers, builders and agencies who move fast."}
-          </motion.p>
-
-          <div className="mt-8 flex justify-center">
-            <Skyline />
-          </div>
-
+        <div className="flex w-full items-center justify-center bg-white px-4 py-5 sm:px-5 sm:py-5 lg:w-[54%] lg:px-7 xl:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}
-            className="mt-6 flex gap-3"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="w-full max-w-[440px] px-1 py-1"
           >
-            {[
-              { k: "1,204", v: "Active leads" },
-              { k: "312", v: "Live listings" },
-              { k: "16.4%", v: "Conversion" },
-            ].map((s) => (
-              <div key={s.v} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
-                <p className="font-display text-lg font-extrabold text-red-300">{s.k}</p>
-                <p className="text-[11px] text-indigo-100/70">{s.v}</p>
-              </div>
-            ))}
+            {children}
           </motion.div>
         </div>
-
-        <p className="relative z-10 text-xs text-indigo-100/50">© {new Date().getFullYear()} PropertySerch.com — Real Estate Transaction OS</p>
-      </div>
-
-      <div className="flex w-full flex-col justify-center px-6 py-10 sm:px-12 lg:w-1/2 lg:px-16">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
-          className="mx-auto w-full max-w-sm"
-        >
-          {children}
-        </motion.div>
       </div>
     </div>
   );

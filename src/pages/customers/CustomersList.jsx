@@ -56,20 +56,53 @@ export default function CustomersList() {
     setModalOpen(false);
   };
 
+  const handleKanbanDrop = (row, stage) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, stage } : item
+    )));
+    toast.push(`${row.name} moved to ${stage}.`, "success");
+  };
+
+  const customerStats = [
+    { label: "Total Customers", value: rows.length, meta: "active profiles" },
+    { label: "Inquiry", value: rows.filter((row) => row.stage === "Inquiry").length, meta: "new prospects" },
+    { label: "Booking", value: rows.filter((row) => row.stage === "Booking").length, meta: "confirmed intent" },
+    { label: "Closed", value: rows.filter((row) => row.stage === "Closed").length, meta: "completed journeys" },
+  ];
+
   return (
     <div>
       <PageHeader
         eyebrow="Customer 360°"
         title="Customers"
-        subtitle="A single profile for requirements, conversations, documents and deal stage."
-        actions={permissions.create && <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add customer</button>}
+        subtitle="A single customer profile for requirements, conversations, documents and deal stage."
       />
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={customerStats}
+        toolbarActions={permissions.create ? <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add customer</button> : undefined}
         searchKeys={["name", "phone", "id"]}
         filters={[{ key: "stage", label: "Stage", options: ["Inquiry", "Site Visit", "Negotiation", "Booking", "Documentation", "Closed"] }]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <div className="flex items-center gap-3">
+              <Avatar name={r.name} size={36} color="#2B3A67" />
+              <div>
+                <p className="font-semibold text-ink-900">{r.name}</p>
+                <p className="text-xs text-ink-500">{r.id} • {r.phone}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm font-medium text-ink-700">{r.requirement}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.stage} />
+            </div>
+            <p className="mt-3 text-xs text-ink-500">Budget: {r.budget}</p>
+          </div>
+        )}
+        kanban={{ key: "stage", columns: ["Inquiry", "Site Visit", "Negotiation", "Booking", "Documentation", "Closed"] }}
+        onKanbanDrop={permissions.edit ? handleKanbanDrop : undefined}
         emptyTitle="No customers yet"
         emptySubtitle="Customer profiles are created automatically from qualified leads."
       />

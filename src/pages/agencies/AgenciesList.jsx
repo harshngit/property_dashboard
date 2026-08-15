@@ -49,20 +49,50 @@ export default function AgenciesList() {
     setModalOpen(false);
   };
 
+  const handleKanbanDrop = (row, status) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, status } : item
+    )));
+    toast.push(`${row.name} moved to ${status}.`, "success");
+  };
+
+  const agencyStats = [
+    { label: "Total Agencies", value: rows.length, meta: "onboarded partners" },
+    { label: "Active Agencies", value: rows.filter((row) => row.status === "Active").length, meta: "currently operating" },
+    { label: "Total Brokers", value: rows.reduce((sum, row) => sum + Number(row.brokers || 0), 0), meta: "across agencies" },
+    { label: "Active Listings", value: rows.reduce((sum, row) => sum + Number(row.activeListings || 0), 0), meta: "managed inventory" },
+  ];
+
   return (
     <div>
       <PageHeader
         eyebrow="Agency Management"
         title="Agencies"
         subtitle="Onboard agencies and manage their brokers and inventory."
-        actions={permissions.create && <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add agency</button>}
       />
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={agencyStats}
+        toolbarActions={permissions.create ? <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add agency</button> : undefined}
         searchKeys={["name", "city", "id"]}
         filters={[{ key: "status", label: "Status", options: ["Active", "Inactive"] }]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <p className="font-semibold text-ink-900">{r.name}</p>
+            <p className="mt-1 text-xs text-ink-500">{r.id} • {r.city}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.status} />
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>Brokers: {r.brokers}</p>
+              <p>Active listings: {r.activeListings}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "status", columns: ["Active", "Inactive"] }}
+        onKanbanDrop={permissions.edit ? handleKanbanDrop : undefined}
         emptyTitle="No agencies yet"
         emptySubtitle="Agencies you onboard will manage their own brokers and listings."
       />

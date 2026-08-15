@@ -70,20 +70,55 @@ export default function BrokersList() {
     setToDelete(null);
   };
 
+  const handleKanbanDrop = (row, status) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, status } : item
+    )));
+    toast.push(`${row.name} moved to ${status}.`, "success");
+  };
+
+  const brokerStats = [
+    { label: "Total Brokers", value: rows.length, meta: "registered accounts" },
+    { label: "Active Brokers", value: rows.filter((row) => row.status === "Active").length, meta: "currently taking leads" },
+    { label: "Assigned Leads", value: rows.reduce((sum, row) => sum + Number(row.leads || 0), 0), meta: "open assignments" },
+    { label: "Deals Won", value: rows.reduce((sum, row) => sum + Number(row.deals || 0), 0), meta: "converted opportunities" },
+  ];
+
   return (
     <div>
       <PageHeader
         eyebrow="Broker CRM"
         title="Brokers"
         subtitle="Manage broker accounts, assigned leads and performance."
-        actions={permissions.create && <button onClick={openCreate} className="btn-primary"><LuPlus className="h-4 w-4" /> Add broker</button>}
       />
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={brokerStats}
+        toolbarActions={permissions.create ? <button onClick={openCreate} className="btn-primary"><LuPlus className="h-4 w-4" /> Add broker</button> : undefined}
         searchKeys={["name", "agency", "id"]}
         filters={[{ key: "status", label: "Status", options: ["Active", "Inactive"] }]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <div className="flex items-center gap-3">
+              <Avatar name={r.name} size={36} color="#FF7A59" />
+              <div>
+                <p className="font-semibold text-ink-900">{r.name}</p>
+                <p className="text-xs text-ink-500">{r.id} • {r.agency}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.status} />
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>Leads: {r.leads}</p>
+              <p>Deals: {r.deals} • Conversion: {r.conversion}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "status", columns: ["Active", "Inactive"] }}
+        onKanbanDrop={permissions.edit ? handleKanbanDrop : undefined}
         onExport={permissions.export ? () => toast.push("Exporting brokers to CSV…", "info") : undefined}
         emptyTitle="No brokers yet"
         emptySubtitle="Invite brokers to start assigning them leads and listings."

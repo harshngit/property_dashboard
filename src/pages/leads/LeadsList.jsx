@@ -17,6 +17,13 @@ export default function LeadsList() {
   const [rows, setRows] = useState(LEADS);
   const [toDelete, setToDelete] = useState(null);
 
+  const leadStats = [
+    { label: "Total Leads", value: rows.length, meta: "vs last update", badge: `+${rows.filter((row) => row.status === "New").length} new` },
+    { label: "New Leads", value: rows.filter((row) => row.status === "New").length, meta: "awaiting first response" },
+    { label: "Contacted", value: rows.filter((row) => row.status === "Contacted").length, meta: "active follow-ups" },
+    { label: "Site Visits", value: rows.filter((row) => row.status === "Site Visit").length, meta: "scheduled or done" },
+  ];
+
   const columns = [
     {
       key: "name", label: "Lead",
@@ -53,29 +60,58 @@ export default function LeadsList() {
     setToDelete(null);
   };
 
+  const handleKanbanDrop = (row, status) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, status } : item
+    )));
+    toast.push(`${row.name} moved to ${status}.`, "success");
+  };
+
   return (
     <div>
       <PageHeader
         eyebrow="Lead Management"
         title="Leads"
         subtitle="Track every inquiry from first contact through to close."
-        actions={
-          permissions.create && (
-            <button onClick={() => navigate("/app/leads/new")} className="btn-primary">
-              <LuPlus className="h-4 w-4" /> Add lead
-            </button>
-          )
-        }
       />
+
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={leadStats}
+        toolbarActions={permissions.create ? (
+          <button onClick={() => navigate("/app/leads/new")} className="btn-primary">
+            <LuPlus className="h-4 w-4" /> Add lead
+          </button>
+        ) : undefined}
         searchKeys={["name", "phone", "property", "id"]}
         filters={[
           { key: "score", label: "Score", options: ["hot", "warm", "cold"] },
           { key: "status", label: "Status", options: ["New", "Contacted", "Site Visit", "Negotiation", "Booking", "Lost"] },
         ]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <div className="flex items-center gap-3">
+              <Avatar name={r.name} size={36} color="#5C6BB8" />
+              <div className="min-w-0">
+                <p className="font-semibold text-ink-900">{r.name}</p>
+                <p className="text-xs text-ink-500">{r.id} • {r.phone}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm font-medium text-ink-700">{r.property}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.score} />
+              <StatusBadge value={r.status} />
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>Budget: {r.budget}</p>
+              <p>Owner: {r.owner}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "status", columns: ["New", "Contacted", "Site Visit", "Negotiation", "Booking", "Lost"] }}
+        onKanbanDrop={permissions.edit ? handleKanbanDrop : undefined}
         onExport={permissions.export ? () => toast.push("Exporting leads to CSV…", "info") : undefined}
         emptyTitle="No leads yet"
         emptySubtitle="New inquiries from your website, WhatsApp and campaigns will appear here."

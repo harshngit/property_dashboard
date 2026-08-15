@@ -66,6 +66,12 @@ export default function UsersPage() {
   const canInvite = role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN;
   const canChangeRole = role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN;
   const roleOptions = useMemo(() => assignableRoles(role), [role]);
+  const userStats = useMemo(() => [
+    { label: "Total Users", value: rows.length, meta: "workspace members" },
+    { label: "Active", value: rows.filter((row) => row.status === "active").length, meta: "can access now" },
+    { label: "Pending Approval", value: rows.filter((row) => row.status === "pending_approval").length, meta: "awaiting activation" },
+    { label: "Verified Email", value: rows.filter((row) => row.emailVerified).length, meta: "trusted identities" },
+  ], [rows]);
 
   const EDIT_FIELDS = useMemo(() => {
     const fields = [
@@ -223,17 +229,27 @@ export default function UsersPage() {
     setToDelete(null);
   };
 
+  const handleKanbanDrop = async (row, status) => {
+    const res = await dispatch(updateUser({ id: row.id, status }));
+    if (updateUser.fulfilled.match(res)) {
+      toast.push(`${row.name} moved to ${STATUS_LABEL[status] || status}.`, "success");
+    } else {
+      toast.push(res.payload || "Failed to update user status.", "error");
+    }
+  };
+
   return (
     <div>
       <PageHeader
         eyebrow="Users & Roles"
         title="Team members"
         subtitle="Manage user accounts, tenant access and role-based permissions."
-        actions={canInvite && <button onClick={() => setInviteOpen(true)} className="btn-primary"><LuPlus className="h-4 w-4" /> Invite user</button>}
       />
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={userStats}
+        toolbarActions={canInvite ? <button onClick={() => setInviteOpen(true)} className="btn-primary"><LuPlus className="h-4 w-4" /> Invite user</button> : undefined}
         loading={status === "loading"}
         searchKeys={["name", "email", "mobile", "role", "tenantId"]}
         filters={[
@@ -241,6 +257,29 @@ export default function UsersPage() {
           { key: "status", label: "Status", options: STATUS_OPTIONS },
         ]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <div className="flex items-center gap-3">
+              <Avatar name={r.name} size={36} src={r.profilePictureUrl} />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-ink-900">{r.name}</p>
+                <p className="truncate text-xs text-ink-500">{r.email}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ROLE_BADGE_CLASS[r.role]}`}>{ROLE_LABELS[r.role] || r.role}</span>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_CLASS[r.status] || "bg-surface-sunk text-ink-500"}`}>
+                {STATUS_LABEL[r.status] || r.status || "—"}
+              </span>
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>Mobile: {r.mobile || "—"}</p>
+              <p>Last login: {formatDateTime(r.lastLoginAt)}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "status", columns: STATUS_OPTIONS }}
+        onKanbanDrop={handleKanbanDrop}
         emptyTitle="No users yet"
         emptySubtitle="Invited users will appear here with their assigned role."
       />

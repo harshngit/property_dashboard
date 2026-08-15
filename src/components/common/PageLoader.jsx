@@ -10,11 +10,11 @@ export default function PageLoader({ label = "Loading your workspace" }) {
           transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
         />
         <motion.div
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 shadow-pop"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] shadow-pop"
           animate={{ y: [0, -6, 0] }}
           transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-red-400">
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white">
             <path d="M6 20V11l6-4.5 6 4.5v9h-4v-5H10v5z" />
           </svg>
         </motion.div>
@@ -22,7 +22,7 @@ export default function PageLoader({ label = "Loading your workspace" }) {
       <p className="mt-5 font-display text-sm font-semibold text-ink-700">{label}&hellip;</p>
       <div className="mt-3 h-1 w-40 overflow-hidden rounded-full bg-ink-900/5">
         <motion.div
-          className="h-full w-1/3 rounded-full bg-gradient-to-r from-indigo-500 to-red-400"
+          className="h-full w-1/3 rounded-full bg-[linear-gradient(90deg,#ff512f_0%,#dd2476_100%)]"
           animate={{ x: ["-120%", "220%"] }}
           transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut" }}
         />

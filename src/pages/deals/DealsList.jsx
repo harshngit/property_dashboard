@@ -27,7 +27,12 @@ export default function DealsList() {
   const [editing, setEditing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const stageCounts = STAGES.map((s) => ({ stage: s, count: rows.filter((r) => r.stage === s).length }));
+  const dealStats = [
+    { label: "Total Deals", value: rows.length, meta: "current pipeline" },
+    { label: "Booking", value: rows.filter((row) => row.stage === "Booking").length, meta: "ready to close" },
+    { label: "Closed", value: rows.filter((row) => row.stage === "Closed").length, meta: "won this cycle" },
+    { label: "Lost", value: rows.filter((row) => row.stage === "Lost").length, meta: "dropped opportunities" },
+  ];
 
   const columns = [
     { key: "customer", label: "Customer", render: (r) => (
@@ -58,30 +63,44 @@ export default function DealsList() {
     setModalOpen(false);
   };
 
+  const handleKanbanDrop = (row, stage) => {
+    setRows((current) => current.map((item) => (
+      item.id === row.id ? { ...item, stage } : item
+    )));
+    toast.push(`${row.customer}'s deal moved to ${stage}.`, "success");
+  };
+
   return (
     <div>
       <PageHeader
         eyebrow="Deal Pipeline"
         title="Deals"
         subtitle="Track every deal from inquiry through documentation to close."
-        actions={permissions.create && <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add deal</button>}
       />
-
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-        {stageCounts.map((s) => (
-          <div key={s.stage} className="card px-3 py-3 text-center">
-            <p className="font-display text-xl font-extrabold text-ink-950">{s.count}</p>
-            <p className="mt-0.5 text-[11px] font-semibold text-ink-500">{s.stage}</p>
-          </div>
-        ))}
-      </div>
 
       <DataTable
         columns={columns}
         data={rows}
+        statsItems={dealStats}
+        toolbarActions={permissions.create ? <button onClick={() => { setEditing(null); setModalOpen(true); }} className="btn-primary"><LuPlus className="h-4 w-4" /> Add deal</button> : undefined}
         searchKeys={["customer", "property", "id"]}
         filters={[{ key: "stage", label: "Stage", options: STAGES }]}
         getActions={getActions}
+        renderCard={(r) => (
+          <div>
+            <p className="font-semibold text-ink-900">{r.customer}</p>
+            <p className="mt-1 text-xs text-ink-500">{r.id} • {r.property}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge value={r.stage} />
+            </div>
+            <div className="mt-3 text-xs text-ink-500">
+              <p>Value: {r.value}</p>
+              <p>Owner: {r.owner} • Closing: {r.closing}</p>
+            </div>
+          </div>
+        )}
+        kanban={{ key: "stage", columns: STAGES }}
+        onKanbanDrop={permissions.edit ? handleKanbanDrop : undefined}
         onExport={permissions.export ? () => toast.push("Exporting deals to CSV…", "info") : undefined}
         emptyTitle="No deals yet"
         emptySubtitle="Deals move here once a lead progresses past first contact."

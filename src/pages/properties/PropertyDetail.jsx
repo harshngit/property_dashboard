@@ -30,7 +30,7 @@ export default function PropertyDetail() {
       />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="card p-6 lg:col-span-1">
-          <div className="mb-4 flex h-40 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-red-500 text-white">
+          <div className="mb-4 flex h-40 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] text-white">
             <LuBuilding className="h-10 w-10 opacity-80" />
           </div>
           <div className="space-y-3 text-sm">
