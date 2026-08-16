@@ -4,6 +4,7 @@ import { LuSearch, LuChevronLeft, LuChevronRight, LuSlidersHorizontal, LuDownloa
 import ActionMenu from "./ActionMenu";
 import EmptyState from "./EmptyState";
 import ListStatsStrip from "./ListStatsStrip";
+import Select from "./Select";
 import { TableSkeleton } from "./PageLoader";
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -211,33 +212,28 @@ export default function DataTable({
                 ) : (
                   <LuLayoutGrid className="h-4 w-4 text-ink-500/70" />
                 )}
-                <select
-                  className="bg-transparent font-semibold text-ink-700 outline-none"
+                <Select
+                  variant="ghost"
+                  className="min-w-[9.5rem]"
                   value={view}
-                  onChange={(e) => setView(e.target.value)}
-                >
-                  <option value="list">Table View</option>
-                  <option value="kanban">Kanban</option>
-                </select>
+                  onChange={setView}
+                  options={[{ value: "list", label: "Table View" }, { value: "kanban", label: "Kanban" }]}
+                />
               </div>
             )}
             {sortableColumns.length > 0 && (
               <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm shadow-[0_8px_22px_-22px_rgba(17,20,43,0.35)]">
                 <LuArrowUpDown className="h-4 w-4 text-ink-500/70" />
-                <select
-                  className="bg-transparent font-semibold text-ink-700 outline-none"
+                <Select
+                  variant="ghost"
+                  className="min-w-[9.5rem]"
                   value={sortKey}
-                  onChange={(e) => {
-                    setSortKey(e.target.value);
+                  onChange={(val) => {
+                    setSortKey(val);
                     setPage(1);
                   }}
-                >
-                  {sortableColumns.map((column) => (
-                    <option key={column.key} value={column.key}>
-                      Sort: {column.label}
-                    </option>
-                  ))}
-                </select>
+                  options={sortableColumns.map((column) => ({ value: column.key, label: `Sort: ${column.label}` }))}
+                />
               </div>
             )}
             <button
@@ -314,14 +310,13 @@ export default function DataTable({
                   <label className="mb-2 block text-sm font-semibold text-ink-700">{f.label}</label>
                   <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-3">
                     <LuSlidersHorizontal className="h-4 w-4 text-ink-500/70" />
-                    <select
-                      className="w-full bg-transparent font-semibold text-ink-700 outline-none"
+                    <Select
+                      variant="ghost"
+                      className="w-full"
                       value={activeFilters[f.key] || "All"}
-                      onChange={(e) => updateFilter(f.key, e.target.value)}
-                    >
-                      <option>All</option>
-                      {f.options.map((o) => <option key={o}>{o}</option>)}
-                    </select>
+                      onChange={(val) => updateFilter(f.key, val)}
+                      options={["All", ...f.options]}
+                    />
                   </div>
                 </div>
               ))}
@@ -526,15 +521,14 @@ export default function DataTable({
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-2 text-sm text-ink-500">
                       <span>Showing per page</span>
-                      <select
+                      <Select
+                        variant="ghost"
+                        className="w-[4.5rem]"
+                        buttonClassName="h-10 rounded-xl border border-[#ECEEF4] bg-white px-3"
                         value={pageSize}
-                        onChange={(e) => updatePageSize(e.target.value)}
-                        className="h-10 rounded-xl border border-[#ECEEF4] bg-white px-3 text-sm font-semibold text-ink-700 outline-none"
-                      >
-                        {[10, 20, 30].map((size) => (
-                          <option key={size} value={size}>{size}</option>
-                        ))}
-                      </select>
+                        onChange={updatePageSize}
+                        options={[10, 20, 30]}
+                      />
                     </div>
                     <div className="flex items-center justify-center gap-1.5">
                       <button

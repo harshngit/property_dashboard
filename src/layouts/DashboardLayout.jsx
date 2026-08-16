@@ -64,6 +64,7 @@ function DashboardShell() {
   const navigate = useNavigate();
   const { mobileNavOpen } = useSelector((s) => s.ui);
   const routeLoading = useRouteLoading();
+  const { title } = usePageTitle();
   const [sidebarHovering, setSidebarHovering] = useState(false);
   const sidebarExpanded = sidebarHovering;
 
@@ -139,10 +140,22 @@ function DashboardShell() {
         {/* Topbar */}
         <header className="relative z-30 shrink-0 rounded-[28px] border border-line bg-white px-4 py-3 shadow-[0_18px_36px_-28px_rgba(17,20,43,0.18)] sm:px-5 lg:px-6">
           <div className="flex min-h-[44px] items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <button onClick={() => dispatch(toggleMobileNav())} className="rounded-lg p-2 text-ink-700 hover:bg-surface-sunk lg:hidden">
                 <LuMenu className="h-5 w-5" />
               </button>
+              <AnimatePresence mode="wait">
+                <motion.h1
+                  key={title}
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: 0.2 }}
+                  className="truncate text-lg font-bold text-ink-950"
+                >
+                  {title}
+                </motion.h1>
+              </AnimatePresence>
             </div>
 
             <div className="flex items-center gap-3">

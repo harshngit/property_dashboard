@@ -1,75 +1,180 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LuSave, LuX } from "react-icons/lu";
+import { useDispatch, useSelector } from "react-redux";
+import { LuSave, LuX, LuUserPlus } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
-import { TextField, SelectField, TextareaField } from "../../components/common/FormField";
+import { TextField, SelectField } from "../../components/common/FormField";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
+import { fetchCustomers, createCustomer } from "../../redux/slices/customersSlice";
+import { fetchProperties } from "../../redux/slices/propertiesSlice";
+import { fetchUsers } from "../../redux/slices/usersSlice";
+import { createLead, updateLead } from "../../redux/slices/leadsSlice";
+import { ROLES } from "../../config/roles";
 
-const emptyLead = {
-  name: "", phone: "", email: "", source: "Website", property: "",
-  budget: "", score: "warm", status: "New", owner: "Unassigned", notes: "",
-};
+const LEAD_SOURCES = ["website", "whatsapp", "manual", "campaign"];
 
-export default function LeadForm({ initial, mode = "create" }) {
+// `lead` (edit mode only) is the normalized lead from leadsSlice - the backend's
+// PUT /leads/:id only accepts source/propertyId, so that's all this form edits
+// once a lead already exists. Everything else (assignee, status) has its own
+// dedicated action elsewhere (reassign dialog, status dropdown on detail page).
+export default function LeadForm({ mode = "create", lead }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const [form, setForm] = useState(initial || emptyLead);
+  const dispatch = useDispatch();
+
+  const { list: customers } = useSelector((s) => s.customers);
+  const { list: properties } = useSelector((s) => s.properties);
+  const { list: users } = useSelector((s) => s.users);
+
+  const [source, setSource] = useState(lead?.source || "website");
+  const [propertyId, setPropertyId] = useState(lead?.propertyId || "");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ fullName: "", email: "", mobile: "" });
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  useEffect(() => {
+    dispatch(fetchProperties({ limit: 100 }));
+    if (mode === "create") {
+      dispatch(fetchUsers({ limit: 100 }));
+      dispatch(fetchCustomers({ limit: 20 }));
+    }
+  }, [dispatch, mode]);
+
+  useEffect(() => {
+    if (mode !== "create") return undefined;
+    const timer = setTimeout(() => {
+      dispatch(fetchCustomers({ search: customerSearch, limit: 20 }));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [customerSearch, dispatch, mode]);
+
+  const assigneeOptions = [
+    { value: "", label: "Unassigned" },
+    ...users.filter((u) => u.role !== ROLES.CUSTOMER).map((u) => ({ value: u.id, label: u.name })),
+  ];
+  const propertyOptions = [
+    { value: "", label: "None" },
+    ...properties.map((p) => ({ value: p.id, label: p.title })),
+  ];
+  const customerOptions = [
+    { value: "", label: customers.length ? "Select a customer…" : "No matches — try another search" },
+    ...customers.map((c) => ({ value: c.id, label: `${c.fullName} — ${c.mobile || c.email || "no contact"}` })),
+  ];
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.fullName.trim()) {
+      toast.push("Customer name is required.", "error");
+      return;
+    }
+    if (!newCustomer.email.trim() && !newCustomer.mobile.trim()) {
+      toast.push("Provide an email or mobile number for the customer.", "error");
+      return;
+    }
+    const res = await dispatch(createCustomer(newCustomer));
+    if (createCustomer.fulfilled.match(res)) {
+      setCustomerId(res.payload.id);
+      setShowNewCustomer(false);
+      setNewCustomer({ fullName: "", email: "", mobile: "" });
+      toast.push(`${res.payload.fullName} added as a customer.`, "success");
+    } else {
+      toast.push(res.payload || "Failed to create customer.", "error");
+    }
+  };
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim()) e.name = "Lead name is required.";
-    if (!/^[+0-9 ]{7,15}$/.test(form.phone.trim())) e.phone = "Enter a valid phone number.";
-    if (!form.property.trim()) e.property = "Link this lead to a property or project.";
+    if (mode === "create" && !customerId) e.customerId = "Select or create a customer for this lead.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+
+    const res = mode === "create"
+      ? await dispatch(createLead({ customerId, source, propertyId: propertyId || undefined, assignedTo: assignedTo || undefined }))
+      : await dispatch(updateLead({ id: lead.id, source, propertyId: propertyId || null }));
+
+    setSaving(false);
+
+    const success = mode === "create" ? createLead.fulfilled.match(res) : updateLead.fulfilled.match(res);
+    if (success) {
       toast.push(mode === "create" ? "Lead created successfully." : "Lead updated successfully.", "success");
       navigate("/app/leads");
-    }, 700);
+    } else {
+      toast.push(res.payload || "Something went wrong.", "error");
+    }
   };
 
   return (
     <div>
       <PageHeader
         eyebrow="Lead Management"
-        title={mode === "create" ? "Add a new lead" : `Edit lead — ${form.name}`}
-        subtitle="Capture inquiry details so AI qualification and matching can kick in."
+        title={mode === "create" ? "Add a new lead" : `Edit lead — ${lead?.customerName || ""}`}
+        subtitle={mode === "create"
+          ? "Link an inquiry to a customer so AI qualification and matching can kick in."
+          : "Only the source and interested property can be changed here — use Reassign or the status dropdown for those."}
       />
       <form onSubmit={submit} className="card space-y-6 p-6">
-        <div>
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Contact details</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <TextField label="Full name" placeholder="e.g. Karan Mehta" value={form.name} onChange={set("name")} error={errors.name} />
-            <TextField label="Phone number" placeholder="+91 98200 11223" value={form.phone} onChange={set("phone")} error={errors.phone} />
-            <TextField label="Email (optional)" type="email" placeholder="name@email.com" value={form.email} onChange={set("email")} />
-            <SelectField label="Source" value={form.source} onChange={set("source")} options={["Website", "WhatsApp", "Campaign", "Referral", "Walk-in"]} />
+        {mode === "create" && (
+          <div>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Customer</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                label="Search customer"
+                placeholder="Search by name, email or mobile"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+              />
+              <SelectField
+                label="Customer"
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                options={customerOptions}
+                error={errors.customerId}
+              />
+            </div>
+            {!showNewCustomer ? (
+              <button
+                type="button"
+                onClick={() => setShowNewCustomer(true)}
+                className="btn-outline mt-3 btn-sm"
+              >
+                <LuUserPlus className="h-4 w-4" /> Can't find them? Add a new customer
+              </button>
+            ) : (
+              <div className="mt-3 rounded-xl border border-line bg-surface-sunk/40 p-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <TextField label="Full name" placeholder="e.g. Karan Mehta" value={newCustomer.fullName} onChange={(e) => setNewCustomer((c) => ({ ...c, fullName: e.target.value }))} />
+                  <TextField label="Email" type="email" placeholder="name@email.com" value={newCustomer.email} onChange={(e) => setNewCustomer((c) => ({ ...c, email: e.target.value }))} />
+                  <TextField label="Mobile" placeholder="+91 98200 11223" value={newCustomer.mobile} onChange={(e) => setNewCustomer((c) => ({ ...c, mobile: e.target.value }))} />
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                  <button type="button" onClick={() => setShowNewCustomer(false)} className="btn-outline btn-sm">Cancel</button>
+                  <button type="button" onClick={handleCreateCustomer} className="btn-primary btn-sm">Create customer</button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Requirement</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <TextField label="Interested property / project" placeholder="e.g. Orchid Heights, 3BHK" value={form.property} onChange={set("property")} error={errors.property} className="sm:col-span-2" />
-            <TextField label="Budget" placeholder="e.g. 1.4 Cr" value={form.budget} onChange={set("budget")} />
-            <SelectField label="Lead score" value={form.score} onChange={set("score")} options={["hot", "warm", "cold"]} />
-            <SelectField label="Status" value={form.status} onChange={set("status")} options={["New", "Contacted", "Site Visit", "Negotiation", "Booking", "Lost"]} />
-            <TextField label="Assigned owner" placeholder="Broker or sales user" value={form.owner} onChange={set("owner")} />
+            <SelectField label="Interested property (optional)" value={propertyId} onChange={(e) => setPropertyId(e.target.value)} options={propertyOptions} />
+            <SelectField label="Source" value={source} onChange={(e) => setSource(e.target.value)} options={LEAD_SOURCES} />
+            {mode === "create" && (
+              <SelectField label="Assign to (optional)" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} options={assigneeOptions} />
+            )}
           </div>
         </div>
-
-        <TextareaField label="Notes" placeholder="Conversation summary, preferences, timeline…" value={form.notes} onChange={set("notes")} />
 
         <div className="flex justify-end gap-3 border-t border-line pt-5">
           <button type="button" onClick={() => navigate("/app/leads")} className="btn-outline">

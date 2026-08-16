@@ -8,6 +8,7 @@ const normalizeUserRow = (u) => ({
   fullName: u.fullName || u.full_name || u.name,
   role: u.role || u.role_name,
   tenantId: u.tenantId || u.tenant_id,
+  tenantName: u.tenantName || u.tenant_name,
   profilePictureUrl: u.profilePictureUrl || u.profile_picture_url,
   emailVerified: u.emailVerified ?? u.email_verified,
   mobileVerified: u.mobileVerified ?? u.mobile_verified,

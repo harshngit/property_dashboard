@@ -1,3 +1,5 @@
+import Select from "./Select";
+
 export function TextField({ label, error, className = "", ...props }) {
   return (
     <div className={className}>
@@ -8,15 +10,17 @@ export function TextField({ label, error, className = "", ...props }) {
   );
 }
 
-export function SelectField({ label, options = [], error, className = "", ...props }) {
+export function SelectField({ label, options = [], error, className = "", value, onChange, disabled, placeholder }) {
   return (
     <div className={className}>
       <label className="field-label">{label}</label>
-      <select className="field-select" {...props}>
-        {options.map((o) => (
-          <option key={o.value ?? o} value={o.value ?? o}>{o.label ?? o}</option>
-        ))}
-      </select>
+      <Select
+        value={value}
+        onChange={(val) => onChange?.({ target: { value: val } })}
+        options={options}
+        disabled={disabled}
+        placeholder={placeholder}
+      />
       {error && <p className="field-error">{error}</p>}
     </div>
   );

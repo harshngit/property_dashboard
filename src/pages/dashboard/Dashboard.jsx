@@ -28,6 +28,7 @@ import {
   LuTrendingDown,
   LuTrendingUp,
 } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 import { usePageTitle } from "../../context/PageTitleContext";
 import useAuth from "../../hooks/useAuth";
 import { DASHBOARD_STATS, LEAD_TREND, LEADS, PROPERTIES, DEALS } from "../../data/mockData";
@@ -53,7 +54,7 @@ function parseMetricValue(raw, fallback) {
   return fallback;
 }
 
-function StatCard({ icon: Icon, label, value, tone = "blue", index = 0 }) {
+function StatCard({ icon: Icon, label, value, tone = "blue", index = 0, onClick }) {
   const tones = {
     blue: {
       iconWrap: "bg-red-50 text-red-600",
@@ -83,7 +84,15 @@ function StatCard({ icon: Icon, label, value, tone = "blue", index = 0 }) {
   const currentTone = tones[tone] || tones.blue;
 
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-line bg-white px-5 py-4 shadow-card">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => (e.key === "Enter" || e.key === " ") && onClick() : undefined}
+      className={`relative overflow-hidden rounded-[24px] border border-line bg-white px-5 py-4 shadow-card ${
+        onClick ? "cursor-pointer transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-pop" : ""
+      }`}
+    >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#ff512f_0%,#dd2476_100%)]" />
       <div className="absolute right-4 top-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted">
         <div className={`flex h-8 w-8 items-center justify-center rounded-full ${currentTone.iconWrap}`}>
@@ -183,6 +192,7 @@ function Panel({ title, icon: Icon, actions, children, className = "" }) {
 export default function Dashboard() {
   const { role } = useAuth();
   const { setTitle } = usePageTitle();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setTitle("Dashboard");
@@ -195,6 +205,7 @@ export default function Dashboard() {
       value: item.value,
       icon: KPI_ICONS[index] || LuBox,
       tone: ["blue", "violet", "green", "red"][index] || "blue",
+      to: item.to,
     }));
   }, [role]);
 
@@ -295,7 +306,15 @@ export default function Dashboard() {
     <div className="space-y-8">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((item, index) => (
-          <StatCard key={item.label} icon={item.icon} label={item.label} value={item.value} tone={item.tone} index={index} />
+          <StatCard
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            value={item.value}
+            tone={item.tone}
+            index={index}
+            onClick={item.to ? () => navigate(item.to) : undefined}
+          />
         ))}
       </div>
 

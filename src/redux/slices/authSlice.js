@@ -26,6 +26,7 @@ const normalizeUser = (apiUser) =>
         fullName: apiUser.fullName || apiUser.full_name || apiUser.name,
         role: apiUser.role || apiUser.role_name,
         tenantId: apiUser.tenantId || apiUser.tenant_id,
+        tenantName: apiUser.tenantName || apiUser.tenant_name,
         profilePictureUrl: apiUser.profilePictureUrl || apiUser.profile_picture_url,
         emailVerified: apiUser.emailVerified ?? apiUser.email_verified,
         mobileVerified: apiUser.mobileVerified ?? apiUser.mobile_verified,
@@ -114,6 +115,7 @@ export const refreshAccessToken = createAsyncThunk(
       const res = await apiRequest("/auth/refresh-token", {
         method: "POST",
         body: { refreshToken: getState().auth.refreshToken },
+        skipAuthRefresh: true,
       });
       return res.data;
     } catch (err) {
@@ -182,6 +184,22 @@ export const fetchCurrentUser = createAsyncThunk(
   }
 );
 
+export const updateProfile = createAsyncThunk(
+  "auth/updateProfile",
+  async ({ fullName, email, mobile }, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/auth/me", {
+        method: "PUT",
+        body: { fullName, email, mobile },
+        token: getState().auth.accessToken,
+      });
+      return normalizeUser(res.data);
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const changePassword = createAsyncThunk(
   "auth/changePassword",
   async ({ currentPassword, newPassword }, { getState, rejectWithValue }) => {
@@ -210,7 +228,11 @@ export const uploadProfilePicture = createAsyncThunk(
         isFormData: true,
         token: getState().auth.accessToken,
       });
-      return normalizeUser(res.data);
+      // Backend only returns { profilePictureUrl }, not a full user - never
+      // run a partial response through normalizeUser(), it would stamp
+      // id/name/role/etc. as explicit `undefined` and wipe out state.user
+      // when merged in.
+      return res.data.profilePictureUrl;
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -234,7 +256,7 @@ export const activateUserAccount = createAsyncThunk(
 
 const authThunks = [
   registerUser, loginUser, sendOtp, verifyOtp, refreshAccessToken,
-  forgotPassword, resetPassword, fetchCurrentUser, changePassword,
+  forgotPassword, resetPassword, fetchCurrentUser, updateProfile, changePassword,
   uploadProfilePicture, activateUserAccount,
 ];
 
@@ -255,6 +277,20 @@ const authSlice = createSlice({
     },
     clearRegisteredUser(state) {
       state.registeredUser = null;
+    },
+    // Dispatched by api/client.js after a transparent refresh-on-401.
+    tokenRefreshed(state, action) {
+      state.accessToken = action.payload.accessToken;
+      persistSession({ user: state.user, accessToken: state.accessToken, refreshToken: state.refreshToken });
+    },
+    // Dispatched by api/client.js when the refresh token is also expired/revoked.
+    sessionExpired(state) {
+      state.user = null;
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.status = "idle";
+      state.error = "Your session has expired. Please log in again.";
+      persistSession(null);
     },
   },
   extraReducers: (builder) => {
@@ -305,9 +341,18 @@ const authSlice = createSlice({
           refreshToken: state.refreshToken,
         });
       })
-      .addCase(uploadProfilePicture.fulfilled, (state, action) => {
+      .addCase(updateProfile.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.user = { ...state.user, ...action.payload };
+        persistSession({
+          user: state.user,
+          accessToken: state.accessToken,
+          refreshToken: state.refreshToken,
+        });
+      })
+      .addCase(uploadProfilePicture.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.user = { ...state.user, profilePictureUrl: action.payload };
         persistSession({
           user: state.user,
           accessToken: state.accessToken,
@@ -348,5 +393,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearAuthError, clearRegisteredUser } = authSlice.actions;
+export const { logout, clearAuthError, clearRegisteredUser, tokenRefreshed, sessionExpired } = authSlice.actions;
 export default authSlice.reducer;

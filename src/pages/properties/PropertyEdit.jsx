@@ -1,22 +1,30 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import PropertyForm from "./PropertyForm";
-import { PROPERTIES } from "../../data/mockData";
 import EmptyState from "../../components/common/EmptyState";
+import { InlineSpinner } from "../../components/common/PageLoader";
+import { fetchPropertyById, clearCurrentProperty } from "../../redux/slices/propertiesSlice";
 
 export default function PropertyEdit() {
   const { id } = useParams();
-  const property = PROPERTIES.find((p) => p.id === id);
+  const dispatch = useDispatch();
+  const { current: property, status } = useSelector((s) => s.properties);
 
-  if (!property) return <EmptyState title="Property not found" subtitle={`No property with id ${id}.`} />;
+  useEffect(() => {
+    dispatch(fetchPropertyById(id));
+    return () => dispatch(clearCurrentProperty());
+  }, [dispatch, id]);
 
-  return (
-    <PropertyForm
-      mode="edit"
-      initial={{
-        title: property.title, type: property.type, txn: property.txn,
-        location: property.location, price: property.price, units: String(property.units),
-        status: property.status, amenities: "", description: "",
-      }}
-    />
-  );
+  if (!property || property.id !== id) {
+    return status === "failed"
+      ? <EmptyState title="Property not found" subtitle={`No property with id ${id}.`} />
+      : (
+        <div className="flex items-center justify-center py-24 text-ink-500">
+          <InlineSpinner className="h-6 w-6" />
+        </div>
+      );
+  }
+
+  return <PropertyForm mode="edit" property={property} />;
 }
