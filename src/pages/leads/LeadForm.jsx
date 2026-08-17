@@ -3,16 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { LuSave, LuX, LuUserPlus } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
-import { TextField, SelectField } from "../../components/common/FormField";
+import { TextField, SelectField, TextareaField } from "../../components/common/FormField";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
-import { fetchCustomers, createCustomer } from "../../redux/slices/customersSlice";
+import { fetchCustomers, createCustomer, fetchCustomerPreferences, updateCustomerPreferences } from "../../redux/slices/customersSlice";
 import { fetchProperties } from "../../redux/slices/propertiesSlice";
 import { fetchUsers } from "../../redux/slices/usersSlice";
 import { createLead, updateLead } from "../../redux/slices/leadsSlice";
 import { ROLES } from "../../config/roles";
 
 const LEAD_SOURCES = ["website", "whatsapp", "manual", "campaign"];
+const REQUIREMENT_TYPES = [
+  { value: "", label: "Any" },
+  { value: "apartment", label: "Apartment" },
+  { value: "villa", label: "Villa" },
+  { value: "independent_house", label: "Independent House" },
+  { value: "plot", label: "Plot" },
+  { value: "commercial", label: "Commercial" },
+  { value: "farmhouse", label: "Farmhouse" },
+  { value: "other", label: "Other" },
+];
+const REQUIREMENT_TXN_TYPES = [{ value: "", label: "Any" }, { value: "buy", label: "Buy" }, { value: "sell", label: "Sell" }, { value: "rent", label: "Rent" }];
+
+const emptyRequirement = { budgetMin: "", budgetMax: "", propertyType: "", transactionType: "", bedrooms: "", notes: "" };
 
 // `lead` (edit mode only) is the normalized lead from leadsSlice - the backend's
 // PUT /leads/:id only accepts source/propertyId, so that's all this form edits
@@ -23,7 +36,7 @@ export default function LeadForm({ mode = "create", lead }) {
   const toast = useToast();
   const dispatch = useDispatch();
 
-  const { list: customers } = useSelector((s) => s.customers);
+  const { list: customers, preferencesByCustomer } = useSelector((s) => s.customers);
   const { list: properties } = useSelector((s) => s.properties);
   const { list: users } = useSelector((s) => s.users);
 
@@ -34,8 +47,11 @@ export default function LeadForm({ mode = "create", lead }) {
   const [customerSearch, setCustomerSearch] = useState("");
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: "", email: "", mobile: "" });
+  const [requirement, setRequirement] = useState(emptyRequirement);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  const activeCustomerId = mode === "create" ? customerId : lead?.customerId;
 
   useEffect(() => {
     dispatch(fetchProperties({ limit: 100 }));
@@ -52,6 +68,30 @@ export default function LeadForm({ mode = "create", lead }) {
     }, 400);
     return () => clearTimeout(timer);
   }, [customerSearch, dispatch, mode]);
+
+  // Load the linked customer's existing budget/requirement so it's editable
+  // here instead of only visible read-only on the Customer 360 profile.
+  useEffect(() => {
+    if (activeCustomerId) dispatch(fetchCustomerPreferences(activeCustomerId));
+    else setRequirement(emptyRequirement);
+  }, [activeCustomerId, dispatch]);
+
+  useEffect(() => {
+    const prefs = activeCustomerId ? preferencesByCustomer[activeCustomerId] : null;
+    if (prefs) {
+      setRequirement({
+        budgetMin: prefs.budgetMin ?? "",
+        budgetMax: prefs.budgetMax ?? "",
+        propertyType: prefs.propertyType || "",
+        transactionType: prefs.transactionType || "",
+        bedrooms: prefs.bedrooms ?? "",
+        notes: prefs.notes || "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCustomerId, preferencesByCustomer[activeCustomerId]]);
+
+  const setReq = (key) => (e) => setRequirement((r) => ({ ...r, [key]: e.target.value }));
 
   const assigneeOptions = [
     { value: "", label: "Unassigned" },
@@ -93,6 +133,8 @@ export default function LeadForm({ mode = "create", lead }) {
     return Object.keys(e).length === 0;
   };
 
+  const hasRequirementInput = Object.values(requirement).some((v) => v !== "" && v != null);
+
   const submit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
@@ -102,15 +144,31 @@ export default function LeadForm({ mode = "create", lead }) {
       ? await dispatch(createLead({ customerId, source, propertyId: propertyId || undefined, assignedTo: assignedTo || undefined }))
       : await dispatch(updateLead({ id: lead.id, source, propertyId: propertyId || null }));
 
-    setSaving(false);
-
     const success = mode === "create" ? createLead.fulfilled.match(res) : updateLead.fulfilled.match(res);
+
     if (success) {
+      const targetCustomerId = mode === "create" ? res.payload.customerId : lead.customerId;
+      if (targetCustomerId && hasRequirementInput) {
+        const prefRes = await dispatch(updateCustomerPreferences({
+          id: targetCustomerId,
+          budgetMin: requirement.budgetMin !== "" ? Number(requirement.budgetMin) : undefined,
+          budgetMax: requirement.budgetMax !== "" ? Number(requirement.budgetMax) : undefined,
+          propertyType: requirement.propertyType || undefined,
+          transactionType: requirement.transactionType || undefined,
+          bedrooms: requirement.bedrooms !== "" ? Number(requirement.bedrooms) : undefined,
+          notes: requirement.notes || undefined,
+          preferredLocations: preferencesByCustomer[targetCustomerId]?.preferredLocations,
+        }));
+        if (!updateCustomerPreferences.fulfilled.match(prefRes)) {
+          toast.push("Lead saved, but the budget/requirement couldn't be updated.", "error");
+        }
+      }
       toast.push(mode === "create" ? "Lead created successfully." : "Lead updated successfully.", "success");
       navigate("/app/leads");
     } else {
       toast.push(res.payload || "Something went wrong.", "error");
     }
+    setSaving(false);
   };
 
   return (
@@ -174,6 +232,26 @@ export default function LeadForm({ mode = "create", lead }) {
               <SelectField label="Assign to (optional)" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} options={assigneeOptions} />
             )}
           </div>
+        </div>
+
+        <div>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Budget & requirement</h3>
+          {activeCustomerId ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <TextField label="Budget min (₹)" type="number" placeholder="e.g. 8000000" value={requirement.budgetMin} onChange={setReq("budgetMin")} />
+                <TextField label="Budget max (₹)" type="number" placeholder="e.g. 12000000" value={requirement.budgetMax} onChange={setReq("budgetMax")} />
+                <TextField label="Bedrooms" type="number" placeholder="e.g. 3" value={requirement.bedrooms} onChange={setReq("bedrooms")} />
+                <SelectField label="Property type" value={requirement.propertyType} onChange={setReq("propertyType")} options={REQUIREMENT_TYPES} />
+                <SelectField label="Transaction type" value={requirement.transactionType} onChange={setReq("transactionType")} options={REQUIREMENT_TXN_TYPES} />
+              </div>
+              <TextareaField label="Notes" placeholder="Preferred locations, must-haves, timeline…" value={requirement.notes} onChange={setReq("notes")} className="mt-4" />
+            </>
+          ) : (
+            <p className="rounded-xl bg-surface-sunk px-4 py-3 text-xs text-ink-500">
+              Select or create a customer above to capture their budget and requirements.
+            </p>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 border-t border-line pt-5">

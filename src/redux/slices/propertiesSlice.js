@@ -195,9 +195,63 @@ export const rejectProperty = createAsyncThunk(
   }
 );
 
+const normalizeMedia = (m) => ({
+  id: m.id,
+  url: m.url,
+  mediaType: m.media_type,
+  displayOrder: m.display_order,
+  isPrimary: m.is_primary,
+});
+
+// Media has its own endpoint — a property must already exist before photos
+// can be attached, so this is only usable once the listing is created.
+export const uploadPropertyMedia = createAsyncThunk(
+  "properties/uploadPropertyMedia",
+  async ({ id, file }, { getState, rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await apiRequest(`/properties/${id}/media/upload`, {
+        method: "POST",
+        body: formData,
+        isFormData: true,
+        token: getState().auth.accessToken,
+      });
+      return { propertyId: id, media: normalizeMedia(res.data) };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const deletePropertyMedia = createAsyncThunk(
+  "properties/deletePropertyMedia",
+  async ({ id, mediaId }, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/properties/${id}/media/${mediaId}`, { method: "DELETE", token: getState().auth.accessToken });
+      return { propertyId: id, mediaId };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const setPrimaryPropertyMedia = createAsyncThunk(
+  "properties/setPrimaryPropertyMedia",
+  async ({ id, mediaId }, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/properties/${id}/media/${mediaId}/primary`, { method: "PUT", token: getState().auth.accessToken });
+      return { propertyId: id, mediaId };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 const mutationThunks = [
   createProperty, updateProperty, updatePropertyPrice, updatePropertyAvailability, approveProperty, rejectProperty,
 ];
+const mediaThunks = [uploadPropertyMedia, deletePropertyMedia, setPrimaryPropertyMedia];
 
 const propertiesSlice = createSlice({
   name: "properties",
@@ -243,6 +297,21 @@ const propertiesSlice = createSlice({
       .addCase(deleteProperty.fulfilled, (state, action) => {
         state.list = state.list.filter((p) => p.id !== action.payload);
       })
+      .addCase(uploadPropertyMedia.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.propertyId) {
+          state.current.media = [...state.current.media, action.payload.media];
+        }
+      })
+      .addCase(deletePropertyMedia.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.propertyId) {
+          state.current.media = state.current.media.filter((m) => m.id !== action.payload.mediaId);
+        }
+      })
+      .addCase(setPrimaryPropertyMedia.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.propertyId) {
+          state.current.media = state.current.media.map((m) => ({ ...m, isPrimary: m.id === action.payload.mediaId }));
+        }
+      })
       .addMatcher(
         (action) =>
           [updateProperty, updatePropertyPrice, updatePropertyAvailability, approveProperty, rejectProperty]
@@ -252,16 +321,16 @@ const propertiesSlice = createSlice({
           if (state.current?.id === action.payload.id) state.current = action.payload;
         }
       )
-      .addMatcher(isPending(...mutationThunks, deleteProperty), (state) => {
+      .addMatcher(isPending(...mutationThunks, deleteProperty, ...mediaThunks), (state) => {
         state.mutationStatus = "loading";
         state.mutationError = null;
       })
-      .addMatcher(isRejected(...mutationThunks, deleteProperty), (state, action) => {
+      .addMatcher(isRejected(...mutationThunks, deleteProperty, ...mediaThunks), (state, action) => {
         state.mutationStatus = "failed";
         state.mutationError = action.payload || "Something went wrong. Please try again.";
       })
       .addMatcher(
-        (action) => [...mutationThunks, deleteProperty].some((t) => t.fulfilled.match(action)),
+        (action) => [...mutationThunks, deleteProperty, ...mediaThunks].some((t) => t.fulfilled.match(action)),
         (state) => {
           state.mutationStatus = "succeeded";
         }

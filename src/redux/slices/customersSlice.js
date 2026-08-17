@@ -104,6 +104,37 @@ export const fetchCustomerProfile = createAsyncThunk(
   }
 );
 
+export const fetchCustomerPreferences = createAsyncThunk(
+  "customers/fetchCustomerPreferences",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest(`/customers/${id}/preferences`, { token: getState().auth.accessToken });
+      return { id, preferences: normalizePreferences(res.data) };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+// Requirement/budget capture — same endpoint the "Customer 360" profile
+// panel reads from, so setting it here (e.g. from the lead form) shows up
+// there too.
+export const updateCustomerPreferences = createAsyncThunk(
+  "customers/updateCustomerPreferences",
+  async ({ id, budgetMin, budgetMax, preferredLocations, propertyType, transactionType, bedrooms, notes }, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest(`/customers/${id}/preferences`, {
+        method: "PUT",
+        body: { budgetMin, budgetMax, preferredLocations, propertyType, transactionType, bedrooms, notes },
+        token: getState().auth.accessToken,
+      });
+      return { id, preferences: normalizePreferences(res.data) };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 // Bulk-fetches each customer's deals (there's no /deals list endpoint) and
 // resolves their current pipeline stage from the most recently updated deal,
 // so the list page can show live Inquiry / Booking / Closed counts.
@@ -139,6 +170,7 @@ const customersSlice = createSlice({
     profile: null,
     profileStatus: "idle",
     dealStageByCustomer: {},
+    preferencesByCustomer: {},
   },
   reducers: {
     clearCustomersError(state) {
@@ -184,7 +216,14 @@ const customersSlice = createSlice({
         action.payload.forEach(([id, stage]) => {
           state.dealStageByCustomer[id] = stage;
         });
-      });
+      })
+      .addMatcher(
+        (action) => [fetchCustomerPreferences, updateCustomerPreferences].some((t) => t.fulfilled.match(action)),
+        (state, action) => {
+          state.preferencesByCustomer[action.payload.id] = action.payload.preferences;
+          if (state.profile?.id === action.payload.id) state.profile.preferences = action.payload.preferences;
+        }
+      );
   },
 });
 

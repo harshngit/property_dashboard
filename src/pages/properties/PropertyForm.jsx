@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { LuSave, LuX } from "react-icons/lu";
+import { LuSave, LuX, LuUpload, LuTrash2, LuCrown, LuImageOff } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import { TextField, SelectField, TextareaField } from "../../components/common/FormField";
+import LocationAutocomplete from "../../components/common/LocationAutocomplete";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
-import { createProperty, updateProperty } from "../../redux/slices/propertiesSlice";
+import {
+  createProperty, updateProperty, uploadPropertyMedia, deletePropertyMedia, setPrimaryPropertyMedia,
+} from "../../redux/slices/propertiesSlice";
 
 const PROPERTY_TYPES = [
   { value: "apartment", label: "Apartment" },
@@ -25,7 +28,7 @@ const TRANSACTION_TYPES = [
 
 const emptyProperty = {
   title: "", description: "", propertyType: "apartment", transactionType: "sell", price: "",
-  city: "", locality: "", address: "", areaSqft: "", bedrooms: "", bathrooms: "", amenities: "",
+  city: "", locality: "", address: "", latitude: "", longitude: "", areaSqft: "", bedrooms: "", bathrooms: "", amenities: "",
 };
 
 // `property` (edit mode only) is the normalized property from propertiesSlice.
@@ -48,6 +51,8 @@ export default function PropertyForm({ mode = "create", property }) {
           city: property.city || "",
           locality: property.locality || "",
           address: property.address || "",
+          latitude: property.latitude ?? "",
+          longitude: property.longitude ?? "",
           areaSqft: property.areaSqft ?? "",
           bedrooms: property.bedrooms ?? "",
           bathrooms: property.bathrooms ?? "",
@@ -57,8 +62,50 @@ export default function PropertyForm({ mode = "create", property }) {
   );
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [brokenPhotoIds, setBrokenPhotoIds] = useState(() => new Set());
+  const fileInputRef = useRef(null);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handlePlaceSelected = (place) => {
+    setForm((f) => ({
+      ...f,
+      address: place.address || f.address,
+      city: place.city || f.city,
+      locality: place.locality || f.locality,
+      latitude: place.latitude ?? f.latitude,
+      longitude: place.longitude ?? f.longitude,
+    }));
+  };
+
+  const handlePhotoSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    setUploadingPhoto(true);
+    for (const file of files) {
+      const res = await dispatch(uploadPropertyMedia({ id: property.id, file }));
+      if (!uploadPropertyMedia.fulfilled.match(res)) {
+        toast.push(res.payload || `Failed to upload ${file.name}.`, "error");
+      }
+    }
+    setUploadingPhoto(false);
+  };
+
+  const handlePhotoDelete = async (mediaId) => {
+    const res = await dispatch(deletePropertyMedia({ id: property.id, mediaId }));
+    if (!deletePropertyMedia.fulfilled.match(res)) {
+      toast.push(res.payload || "Failed to remove photo.", "error");
+    }
+  };
+
+  const handleSetPrimary = async (mediaId) => {
+    const res = await dispatch(setPrimaryPropertyMedia({ id: property.id, mediaId }));
+    if (!setPrimaryPropertyMedia.fulfilled.match(res)) {
+      toast.push(res.payload || "Failed to set cover photo.", "error");
+    }
+  };
 
   const validate = () => {
     const e = {};
@@ -83,6 +130,8 @@ export default function PropertyForm({ mode = "create", property }) {
       city: form.city,
       locality: form.locality || undefined,
       address: form.address || undefined,
+      latitude: form.latitude !== "" ? Number(form.latitude) : undefined,
+      longitude: form.longitude !== "" ? Number(form.longitude) : undefined,
       areaSqft: form.areaSqft ? Number(form.areaSqft) : undefined,
       bedrooms: form.bedrooms !== "" ? Number(form.bedrooms) : undefined,
       bathrooms: form.bathrooms !== "" ? Number(form.bathrooms) : undefined,
@@ -97,8 +146,13 @@ export default function PropertyForm({ mode = "create", property }) {
 
     const success = mode === "create" ? createProperty.fulfilled.match(res) : updateProperty.fulfilled.match(res);
     if (success) {
-      toast.push(mode === "create" ? "Property submitted for approval." : "Property updated successfully.", "success");
-      navigate("/app/properties");
+      if (mode === "create") {
+        toast.push("Property submitted for approval — now add some photos.", "success");
+        navigate(`/app/properties/${res.payload.id}/edit`);
+      } else {
+        toast.push("Property updated successfully.", "success");
+        navigate("/app/properties");
+      }
     } else {
       toast.push(res.payload || "Something went wrong.", "error");
     }
@@ -118,6 +172,11 @@ export default function PropertyForm({ mode = "create", property }) {
             <TextField label="Property / project title" placeholder="e.g. Orchid Heights" value={form.title} onChange={set("title")} error={errors.title} className="sm:col-span-2" />
             <SelectField label="Property type" value={form.propertyType} onChange={set("propertyType")} options={PROPERTY_TYPES} />
             <SelectField label="Transaction type" value={form.transactionType} onChange={set("transactionType")} options={TRANSACTION_TYPES} />
+            <LocationAutocomplete
+              label="Search location (Google)"
+              onPlaceSelected={handlePlaceSelected}
+              className="sm:col-span-2"
+            />
             <TextField label="City" placeholder="e.g. Bengaluru" value={form.city} onChange={set("city")} error={errors.city} />
             <TextField label="Locality" placeholder="e.g. Whitefield" value={form.locality} onChange={set("locality")} />
             <TextField label="Address (optional)" placeholder="Full address" value={form.address} onChange={set("address")} className="sm:col-span-2" />
@@ -137,6 +196,60 @@ export default function PropertyForm({ mode = "create", property }) {
           <TextField label="Amenities (comma separated)" placeholder="Clubhouse, Gym, Swimming pool" value={form.amenities} onChange={set("amenities")} className="mb-4" />
           <TextareaField label="Description" placeholder="Highlights, connectivity, possession date…" value={form.description} onChange={set("description")} />
         </div>
+
+        {mode === "edit" && (
+          <div>
+            <h3 className="mb-3 flex items-center justify-between text-sm font-bold uppercase tracking-wide text-ink-500">
+              <span>Photos</span>
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto} className="btn-outline btn-sm normal-case tracking-normal">
+                {uploadingPhoto ? <InlineSpinner className="h-3.5 w-3.5" /> : <LuUpload className="h-3.5 w-3.5" />}
+                Add photos
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+            </h3>
+            {property?.media?.length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {property.media.map((m) => {
+                  const isBroken = !m.url || brokenPhotoIds.has(m.id);
+                  return (
+                    <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-line bg-surface-sunk">
+                      {isBroken ? (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-ink-400">
+                          <LuImageOff className="h-6 w-6" />
+                          <span className="text-[10px] font-medium">Preview unavailable</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={m.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={() => setBrokenPhotoIds((ids) => new Set(ids).add(m.id))}
+                        />
+                      )}
+                      {m.isPrimary && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] px-2 py-0.5 text-[10px] font-bold text-white">
+                          Cover
+                        </span>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-gradient-to-t from-ink-950/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        {!m.isPrimary && (
+                          <button type="button" onClick={() => handleSetPrimary(m.id)} title="Make main photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-amber-600 hover:bg-white">
+                            <LuCrown className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button type="button" onClick={() => handlePhotoDelete(m.id)} title="Remove photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-coral-600 hover:bg-white">
+                          <LuTrash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="rounded-xl bg-surface-sunk px-4 py-3 text-xs text-ink-500">No photos uploaded yet.</p>
+            )}
+          </div>
+        )}
 
         {mode === "edit" && (
           <p className="rounded-xl bg-surface-sunk px-4 py-3 text-xs text-ink-500">
