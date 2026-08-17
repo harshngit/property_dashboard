@@ -53,7 +53,7 @@ export const registerUser = createAsyncThunk(
     try {
       const res = await apiRequest("/auth/register", {
         method: "POST",
-        body: { full_name: fullName, email, mobile, password, role, tenant_id: tenantId ?? null },
+        body: { fullName, email, mobile, password, role, tenantId: tenantId ?? null },
         token: getState().auth.accessToken || undefined,
       });
       return normalizeUser(res.data);

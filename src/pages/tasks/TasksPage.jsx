@@ -1,43 +1,82 @@
-import { useState } from "react";
-import { LuPlus, LuCircleCheck, LuCircle, LuTrash2, LuClock } from "react-icons/lu";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { LuPlus, LuCircleCheck, LuCircle, LuClock } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import EmptyState from "../../components/common/EmptyState";
 import QuickFormModal from "../../components/common/QuickFormModal";
+import { InlineSpinner } from "../../components/common/PageLoader";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
+import { fetchTasks, createTask, completeTask, clearTasksError } from "../../redux/slices/tasksSlice";
 import clsx from "clsx";
 
-const INITIAL_TASKS = [
-  { id: "T1", title: "Call Karan Mehta about site visit", due: "Today, 11:30 AM", tag: "Hot lead", done: false },
-  { id: "T2", title: "Send WhatsApp brochure — Palm Grove Villas", due: "Today, 2:00 PM", tag: "Follow-up", done: false },
-  { id: "T3", title: "Confirm booking documents with Divya Prakash", due: "Today, 4:30 PM", tag: "Documentation", done: false },
-  { id: "T4", title: "Follow up Neha Bansal — no response 2 days", due: "Overdue", tag: "Overdue", done: false },
-  { id: "T5", title: "Share matched properties with Ananya Rao", due: "Tomorrow, 10:00 AM", tag: "New lead", done: true },
+const PRIORITIES = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
 ];
+const RELATED_TYPES = [
+  { value: "", label: "None" },
+  { value: "lead", label: "Lead" },
+  { value: "customer", label: "Customer" },
+  { value: "deal", label: "Deal" },
+  { value: "property", label: "Property" },
+];
+const PRIORITY_CLASS = {
+  high: "bg-coral-50 text-coral-600",
+  medium: "bg-indigo-50 text-indigo-500",
+  low: "bg-surface-sunk text-ink-500",
+};
 
 const FIELDS = [
   { key: "title", label: "Task", placeholder: "e.g. Call the customer", full: true },
-  { key: "due", label: "Due", placeholder: "e.g. Today, 4:00 PM" },
-  { key: "tag", label: "Tag", placeholder: "e.g. Follow-up" },
+  { key: "dueDate", label: "Due date", type: "datetime-local", full: true },
+  { key: "priority", label: "Priority", type: "select", options: PRIORITIES },
+  { key: "relatedEntityType", label: "Related to", type: "select", options: RELATED_TYPES },
 ];
+
+const formatDue = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const today = new Date();
+  const isToday = d.toDateString() === today.toDateString();
+  return `${isToday ? "Today" : d.toLocaleDateString(undefined, { month: "short", day: "2-digit" })}, ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+};
 
 export default function TasksPage() {
   const toast = useToast();
+  const dispatch = useDispatch();
   const { permissions } = useAuth();
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const { list: tasks, status, mutationStatus } = useSelector((s) => s.tasks);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const toggle = (id) => setTasks((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
-  const remove = (id) => setTasks((t) => t.filter((x) => x.id !== id));
+  useEffect(() => {
+    dispatch(fetchTasks({ limit: 100 }));
+    return () => dispatch(clearTasksError());
+  }, [dispatch]);
 
-  const handleSave = (data) => {
-    setTasks((t) => [{ id: `T${Date.now()}`, done: false, ...data }, ...t]);
-    toast.push("Task added.", "success");
+  const toggle = async (task) => {
+    if (task.status === "completed") return;
+    const res = await dispatch(completeTask(task.id));
+    if (completeTask.fulfilled.match(res)) toast.push("Task marked complete.", "success");
+    else toast.push(res.payload || "Failed to complete task.", "error");
+  };
+
+  const handleSave = async (data) => {
+    const res = await dispatch(createTask({
+      title: data.title,
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+      priority: data.priority || "medium",
+      relatedEntityType: data.relatedEntityType || undefined,
+    }));
+    if (createTask.fulfilled.match(res)) toast.push("Task added.", "success");
+    else toast.push(res.payload || "Failed to add task.", "error");
     setModalOpen(false);
   };
 
-  const pending = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
+  const pending = tasks.filter((t) => t.status !== "completed");
+  const done = tasks.filter((t) => t.status === "completed");
 
   return (
     <div>
@@ -49,25 +88,33 @@ export default function TasksPage() {
       />
 
       <div className="card p-2">
-        {tasks.length === 0 ? (
+        {status === "loading" && tasks.length === 0 ? (
+          <div className="flex justify-center py-10"><InlineSpinner className="h-6 w-6 text-ink-400" /></div>
+        ) : tasks.length === 0 ? (
           <EmptyState title="No tasks yet" subtitle="Create a task to keep your follow-ups on track." />
         ) : (
           <div className="divide-y divide-line">
             {[...pending, ...done].map((t) => (
               <div key={t.id} className="flex items-center gap-3 px-4 py-3.5">
-                <button onClick={() => toggle(t.id)} className={clsx("shrink-0", t.done ? "text-green-500" : "text-ink-500/50 hover:text-green-500")}>
-                  {t.done ? <LuCircleCheck className="h-5 w-5" /> : <LuCircle className="h-5 w-5" />}
+                <button
+                  onClick={() => toggle(t)}
+                  disabled={t.status === "completed" || mutationStatus === "loading"}
+                  className={clsx("shrink-0", t.status === "completed" ? "text-green-500" : "text-ink-500/50 hover:text-green-500")}
+                >
+                  {t.status === "completed" ? <LuCircleCheck className="h-5 w-5" /> : <LuCircle className="h-5 w-5" />}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className={clsx("truncate text-sm font-semibold", t.done ? "text-ink-500 line-through" : "text-ink-900")}>{t.title}</p>
+                  <p className={clsx("truncate text-sm font-semibold", t.status === "completed" ? "text-ink-500 line-through" : "text-ink-900")}>{t.title}</p>
                   <p className="flex items-center gap-1.5 text-xs text-ink-500">
-                    <LuClock className="h-3 w-3" /> {t.due}
-                    <span className={clsx("ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold", t.tag === "Overdue" ? "bg-coral-50 text-coral-600" : "bg-indigo-50 text-indigo-500")}>{t.tag}</span>
+                    <LuClock className="h-3 w-3" /> {formatDue(t.dueDate)}
+                    <span className={clsx("ml-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold", t.status === "overdue" ? "bg-coral-50 text-coral-600" : PRIORITY_CLASS[t.priority])}>
+                      {t.status === "overdue" ? "Overdue" : t.priority}
+                    </span>
+                    {t.relatedEntityType && (
+                      <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-[10px] font-bold capitalize text-ink-500">{t.relatedEntityType}</span>
+                    )}
                   </p>
                 </div>
-                <button onClick={() => remove(t.id)} className="rounded-lg p-2 text-ink-500/60 hover:bg-coral-50 hover:text-coral-600">
-                  <LuTrash2 className="h-4 w-4" />
-                </button>
               </div>
             ))}
           </div>
@@ -77,7 +124,7 @@ export default function TasksPage() {
       <QuickFormModal
         open={modalOpen} onClose={() => setModalOpen(false)} onSubmit={handleSave}
         title="Add task" description="Add a reminder or follow-up to your daily list."
-        fields={FIELDS} initial={{}} submitLabel="Add task"
+        fields={FIELDS} initial={{ priority: "medium", relatedEntityType: "" }} submitLabel="Add task"
       />
     </div>
   );

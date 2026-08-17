@@ -46,11 +46,11 @@ export const updateUser = createAsyncThunk(
   async ({ id, ...patch }, { getState, rejectWithValue }) => {
     try {
       const body = {};
-      if (patch.fullName !== undefined) body.full_name = patch.fullName;
+      if (patch.fullName !== undefined) body.fullName = patch.fullName;
       if (patch.email !== undefined) body.email = patch.email;
       if (patch.mobile !== undefined) body.mobile = patch.mobile;
       if (patch.status !== undefined) body.status = patch.status;
-      if (patch.tenantId !== undefined) body.tenant_id = patch.tenantId;
+      if (patch.tenantId !== undefined) body.tenantId = patch.tenantId;
       const res = await apiRequest(`/users/${id}`, {
         method: "PUT",
         body,

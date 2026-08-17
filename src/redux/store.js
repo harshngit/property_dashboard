@@ -5,6 +5,8 @@ import usersReducer from "./slices/usersSlice";
 import leadsReducer from "./slices/leadsSlice";
 import customersReducer from "./slices/customersSlice";
 import propertiesReducer from "./slices/propertiesSlice";
+import brokerReducer from "./slices/brokerSlice";
+import tasksReducer from "./slices/tasksSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,5 +16,7 @@ export const store = configureStore({
     leads: leadsReducer,
     customers: customersReducer,
     properties: propertiesReducer,
+    broker: brokerReducer,
+    tasks: tasksReducer,
   },
 });
