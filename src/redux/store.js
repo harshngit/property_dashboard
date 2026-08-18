@@ -7,6 +7,9 @@ import customersReducer from "./slices/customersSlice";
 import propertiesReducer from "./slices/propertiesSlice";
 import brokerReducer from "./slices/brokerSlice";
 import tasksReducer from "./slices/tasksSlice";
+import agenciesReducer from "./slices/agenciesSlice";
+import dealsReducer from "./slices/dealsSlice";
+import projectsReducer from "./slices/projectsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -18,5 +21,8 @@ export const store = configureStore({
     properties: propertiesReducer,
     broker: brokerReducer,
     tasks: tasksReducer,
+    agencies: agenciesReducer,
+    deals: dealsReducer,
+    projects: projectsReducer,
   },
 });

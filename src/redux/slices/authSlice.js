@@ -28,6 +28,10 @@ const normalizeUser = (apiUser) =>
         tenantId: apiUser.tenantId || apiUser.tenant_id,
         tenantName: apiUser.tenantName || apiUser.tenant_name,
         profilePictureUrl: apiUser.profilePictureUrl || apiUser.profile_picture_url,
+        gender: apiUser.gender,
+        address: apiUser.address,
+        taxId: apiUser.taxId || apiUser.tax_id,
+        taxCountry: apiUser.taxCountry || apiUser.tax_country,
         emailVerified: apiUser.emailVerified ?? apiUser.email_verified,
         mobileVerified: apiUser.mobileVerified ?? apiUser.mobile_verified,
         lastLoginAt: apiUser.lastLoginAt || apiUser.last_login_at,
@@ -186,11 +190,11 @@ export const fetchCurrentUser = createAsyncThunk(
 
 export const updateProfile = createAsyncThunk(
   "auth/updateProfile",
-  async ({ fullName, email, mobile }, { getState, rejectWithValue }) => {
+  async ({ fullName, email, mobile, gender, address, taxId, taxCountry }, { getState, rejectWithValue }) => {
     try {
       const res = await apiRequest("/auth/me", {
         method: "PUT",
-        body: { fullName, email, mobile },
+        body: { fullName, email, mobile, gender, address, taxId, taxCountry },
         token: getState().auth.accessToken,
       });
       return normalizeUser(res.data);
@@ -239,6 +243,20 @@ export const uploadProfilePicture = createAsyncThunk(
   }
 );
 
+export const deleteProfilePicture = createAsyncThunk(
+  "auth/deleteProfilePicture",
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest("/auth/me/profile-picture", {
+        method: "DELETE",
+        token: getState().auth.accessToken,
+      });
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const activateUserAccount = createAsyncThunk(
   "auth/activateUserAccount",
   async (userId, { getState, rejectWithValue }) => {
@@ -257,7 +275,7 @@ export const activateUserAccount = createAsyncThunk(
 const authThunks = [
   registerUser, loginUser, sendOtp, verifyOtp, refreshAccessToken,
   forgotPassword, resetPassword, fetchCurrentUser, updateProfile, changePassword,
-  uploadProfilePicture, activateUserAccount,
+  uploadProfilePicture, deleteProfilePicture, activateUserAccount,
 ];
 
 const authSlice = createSlice({
@@ -353,6 +371,15 @@ const authSlice = createSlice({
       .addCase(uploadProfilePicture.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.user = { ...state.user, profilePictureUrl: action.payload };
+        persistSession({
+          user: state.user,
+          accessToken: state.accessToken,
+          refreshToken: state.refreshToken,
+        });
+      })
+      .addCase(deleteProfilePicture.fulfilled, (state) => {
+        state.status = "succeeded";
+        state.user = { ...state.user, profilePictureUrl: null };
         persistSession({
           user: state.user,
           accessToken: state.accessToken,

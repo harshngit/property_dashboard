@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { LuPlus, LuEye, LuPencil, LuTrash2, LuUserX, LuCircleCheck } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
@@ -39,6 +40,7 @@ const INVITE_FIELDS = [
 export default function BrokersList() {
   const toast = useToast();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user, permissions } = useAuth();
   const { list: users, status } = useSelector((s) => s.users);
   const { list: leads } = useSelector((s) => s.leads);
@@ -112,7 +114,7 @@ export default function BrokersList() {
   const openEdit = (row) => { setEditing(row); setEditOpen(true); };
 
   const getActions = (row) => [
-    { label: "View performance", icon: LuEye, onClick: () => toast.push(`${row.name}: ${row.leadsAssigned} leads, ${row.dealsWon} won, ${row.conversion} conversion.`, "info") },
+    { label: "View performance", icon: LuEye, onClick: () => navigate(`/app/brokers/${row.id}`) },
     { label: "Edit broker", icon: LuPencil, onClick: () => openEdit(row), hidden: !permissions.edit },
     { label: "Activate account", icon: LuCircleCheck, onClick: () => handleActivate(row), hidden: row.status !== "pending_approval" },
     { label: "Deactivate", icon: LuUserX, onClick: () => handleStatus(row, "inactive"), hidden: !permissions.edit || row.status === "inactive" },

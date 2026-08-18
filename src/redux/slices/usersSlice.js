@@ -41,6 +41,18 @@ export const fetchUsers = createAsyncThunk(
   }
 );
 
+export const fetchUserById = createAsyncThunk(
+  "users/fetchUserById",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest(`/users/${id}`, { token: getState().auth.accessToken });
+      return normalizeUserRow(res.data);
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const updateUser = createAsyncThunk(
   "users/updateUser",
   async ({ id, ...patch }, { getState, rejectWithValue }) => {
@@ -114,6 +126,7 @@ const usersSlice = createSlice({
   initialState: {
     list: [],
     meta: null,
+    current: null,
     status: "idle", // idle | loading | succeeded | failed
     error: null,
     mutationStatus: "idle",
@@ -123,6 +136,9 @@ const usersSlice = createSlice({
     clearUsersError(state) {
       state.error = null;
       state.mutationError = null;
+    },
+    clearCurrentUser(state) {
+      state.current = null;
     },
   },
   extraReducers: (builder) => {
@@ -140,14 +156,19 @@ const usersSlice = createSlice({
         state.status = "failed";
         state.error = action.payload || "Failed to load users.";
       })
+      .addCase(fetchUserById.fulfilled, (state, action) => {
+        state.current = action.payload;
+      })
       .addCase(updateUser.fulfilled, (state, action) => {
         state.list = state.list.map((u) => (u.id === action.payload.id ? { ...u, ...action.payload } : u));
+        if (state.current?.id === action.payload.id) state.current = { ...state.current, ...action.payload };
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.list = state.list.filter((u) => u.id !== action.payload);
       })
       .addCase(changeUserRole.fulfilled, (state, action) => {
         state.list = state.list.map((u) => (u.id === action.payload.id ? { ...u, ...action.payload } : u));
+        if (state.current?.id === action.payload.id) state.current = { ...state.current, ...action.payload };
       })
       .addMatcher(isPending(...mutationThunks), (state) => {
         state.mutationStatus = "loading";
@@ -166,5 +187,5 @@ const usersSlice = createSlice({
   },
 });
 
-export const { clearUsersError } = usersSlice.actions;
+export const { clearUsersError, clearCurrentUser } = usersSlice.actions;
 export default usersSlice.reducer;

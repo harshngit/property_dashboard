@@ -48,6 +48,18 @@ export const fetchCustomers = createAsyncThunk(
   }
 );
 
+export const fetchCustomerById = createAsyncThunk(
+  "customers/fetchCustomerById",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest(`/customers/${id}`, { token: getState().auth.accessToken });
+      return normalizeCustomer(res.data);
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const createCustomer = createAsyncThunk(
   "customers/createCustomer",
   async ({ fullName, email, mobile }, { getState, rejectWithValue }) => {
@@ -165,6 +177,7 @@ const customersSlice = createSlice({
   initialState: {
     list: [],
     meta: null,
+    current: null,
     status: "idle", // idle | loading | succeeded | failed
     error: null,
     profile: null,
@@ -179,6 +192,9 @@ const customersSlice = createSlice({
     clearCustomerProfile(state) {
       state.profile = null;
       state.profileStatus = "idle";
+    },
+    clearCurrentCustomer(state) {
+      state.current = null;
     },
   },
   extraReducers: (builder) => {
@@ -196,11 +212,15 @@ const customersSlice = createSlice({
         state.status = "failed";
         state.error = action.payload || "Failed to load customers.";
       })
+      .addCase(fetchCustomerById.fulfilled, (state, action) => {
+        state.current = action.payload;
+      })
       .addCase(createCustomer.fulfilled, (state, action) => {
         state.list = [action.payload, ...state.list];
       })
       .addCase(updateCustomer.fulfilled, (state, action) => {
         state.list = state.list.map((c) => (c.id === action.payload.id ? action.payload : c));
+        if (state.current?.id === action.payload.id) state.current = action.payload;
       })
       .addCase(fetchCustomerProfile.pending, (state) => {
         state.profileStatus = "loading";
@@ -227,5 +247,5 @@ const customersSlice = createSlice({
   },
 });
 
-export const { clearCustomersError, clearCustomerProfile } = customersSlice.actions;
+export const { clearCustomersError, clearCustomerProfile, clearCurrentCustomer } = customersSlice.actions;
 export default customersSlice.reducer;

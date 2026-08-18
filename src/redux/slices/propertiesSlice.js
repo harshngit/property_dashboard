@@ -1,6 +1,17 @@
 import { createSlice, createAsyncThunk, isPending, isRejected } from "@reduxjs/toolkit";
 import { apiRequest } from "../../api/client";
 
+// Field name for the file itself isn't confirmed against the real API - try
+// every plausible key so a mismatch degrades to a missing image (handled
+// gracefully in the UI) instead of a silently-broken <img src="undefined">.
+const normalizeMedia = (m) => ({
+  id: m.id,
+  url: m.url || m.file_url || m.media_url || m.image_url || m.path,
+  mediaType: m.media_type || m.mediaType,
+  displayOrder: m.display_order ?? m.displayOrder,
+  isPrimary: m.is_primary ?? m.isPrimary,
+});
+
 const normalizeProperty = (p) =>
   p
     ? {
@@ -32,13 +43,7 @@ const normalizeProperty = (p) =>
         approvedAt: p.approved_at,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
-        media: (p.media || []).map((m) => ({
-          id: m.id,
-          url: m.url,
-          mediaType: m.media_type,
-          displayOrder: m.display_order,
-          isPrimary: m.is_primary,
-        })),
+        media: (p.media || []).map(normalizeMedia),
       }
     : null;
 
@@ -194,14 +199,6 @@ export const rejectProperty = createAsyncThunk(
     }
   }
 );
-
-const normalizeMedia = (m) => ({
-  id: m.id,
-  url: m.url,
-  mediaType: m.media_type,
-  displayOrder: m.display_order,
-  isPrimary: m.is_primary,
-});
 
 // Media has its own endpoint — a property must already exist before photos
 // can be attached, so this is only usable once the listing is created.

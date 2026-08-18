@@ -19,7 +19,9 @@ import PropertyCreate from "./pages/properties/PropertyCreate";
 import PropertyEdit from "./pages/properties/PropertyEdit";
 import PropertyDetail from "./pages/properties/PropertyDetail";
 import CustomersList from "./pages/customers/CustomersList";
+import CustomerDetail from "./pages/customers/CustomerDetail";
 import BrokersList from "./pages/brokers/BrokersList";
+import BrokerDetail from "./pages/brokers/BrokerDetail";
 import AgenciesList from "./pages/agencies/AgenciesList";
 import BuildersList from "./pages/builders/BuildersList";
 import DealsList from "./pages/deals/DealsList";
@@ -66,10 +68,12 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.CUSTOMERS} />}>
             <Route path="customers" element={<CustomersList />} />
+            <Route path="customers/:id" element={<CustomerDetail />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.BROKERS} />}>
             <Route path="brokers" element={<BrokersList />} />
+            <Route path="brokers/:id" element={<BrokerDetail />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.AGENCIES} />}>
