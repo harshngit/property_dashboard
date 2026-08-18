@@ -23,8 +23,15 @@ const normalizeProperty = (p) =>
         brokerName: p.broker_name,
         builderId: p.builder_id,
         builderName: p.builder_name,
+        // Denormalized onto the property the same way builderName already
+        // is - the Builder's own record (usersSlice, role=builder) is the
+        // source of truth, edited from Builders > Edit builder.
+        builderRating: p.builder_rating ?? p.builderRating,
+        builderExperienceYears: p.builder_experience_years ?? p.builderExperienceYears,
+        builderProjectsCount: p.builder_projects_count ?? p.builderProjectsCount,
         title: p.title,
         description: p.description,
+        aboutExtended: p.about_extended || p.aboutExtended,
         propertyType: p.property_type,
         transactionType: p.transaction_type,
         price: p.price,
@@ -34,9 +41,24 @@ const normalizeProperty = (p) =>
         latitude: p.latitude,
         longitude: p.longitude,
         areaSqft: p.area_sqft,
+        carpetAreaSqft: p.carpet_area_sqft ?? p.carpetAreaSqft,
+        facing: p.facing,
         bedrooms: p.bedrooms,
         bathrooms: p.bathrooms,
         amenities: p.amenities || [],
+        tags: p.tags || [],
+        badge: p.badge || null,
+        verified: p.verified ?? p.is_verified ?? false,
+        reraNumber: p.rera_number || p.reraNumber || null,
+        possessionStatus: p.possession_status || p.possessionStatus,
+        floorNumber: p.floor_number ?? p.floorNumber,
+        totalFloors: p.total_floors ?? p.totalFloors,
+        furnishing: p.furnishing,
+        parkingSpots: p.parking_spots ?? p.parkingSpots,
+        parkingType: p.parking_type || p.parkingType,
+        ageOfProperty: p.age_of_property || p.ageOfProperty,
+        gatedCommunity: p.gated_community ?? p.gatedCommunity ?? false,
+        faqs: (p.faqs || []).map((f) => ({ question: f.question, answer: f.answer })),
         status: p.status,
         rejectionReason: p.rejection_reason,
         approvedBy: p.approved_by,
@@ -83,8 +105,10 @@ export const fetchPropertyById = createAsyncThunk(
 );
 
 const PROPERTY_FIELDS = [
-  "title", "description", "propertyType", "transactionType", "city", "locality",
-  "address", "latitude", "longitude", "areaSqft", "bedrooms", "bathrooms", "amenities",
+  "title", "description", "aboutExtended", "propertyType", "transactionType", "city", "locality",
+  "address", "latitude", "longitude", "areaSqft", "carpetAreaSqft", "facing", "bedrooms", "bathrooms",
+  "amenities", "tags", "badge", "verified", "reraNumber", "possessionStatus", "floorNumber",
+  "totalFloors", "furnishing", "parkingSpots", "parkingType", "ageOfProperty", "gatedCommunity", "faqs",
 ];
 
 export const createProperty = createAsyncThunk(

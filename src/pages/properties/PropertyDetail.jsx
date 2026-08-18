@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   LuArrowLeft, LuPencil, LuMapPin, LuLayers, LuBuilding, LuCircleCheck, LuCircleX, LuIndianRupee,
   LuBedDouble, LuBath, LuChevronLeft, LuChevronRight, LuPhone, LuNavigation, LuClock3, LuTrendingUp,
-  LuCalendarDays, LuWallet, LuPercent, LuGauge, LuShieldCheck,
+  LuShieldCheck, LuLayoutGrid, LuStamp, LuStar, LuBriefcase, LuSofa, LuCar, LuLock, LuChevronDown, LuCalendarCheck,
+  LuDumbbell, LuWaves, LuSquareParking, LuBaby, LuWifi, LuZap, LuTrees, LuArrowUpDown, LuCctv, LuCheck,
 } from "react-icons/lu";
 import { usePageTitle } from "../../context/PageTitleContext";
 import StatusBadge from "../../components/common/StatusBadge";
@@ -55,12 +56,37 @@ function StatInline({ icon: Icon, label, value }) {
   );
 }
 
-// No backend source for area market analytics exists yet - these are
-// illustrative estimates scaled off the listing's own price (proportioned
-// the same way as a typical comparable), not live market data. Swap this
-// out for a real valuation/rental-comps API when one is available.
-const ESTIMATE_RATIOS = { weeklyRent: 0.0011143, cashflow: 0.05794, low: 0.9715, med: 1.0429, high: 1.1286 };
-const estimateFromPrice = (price, ratio) => Math.round((price || 0) * ratio);
+// Amenities are stored as plain strings (no icon field) - pick an icon by
+// keyword match for display only, no schema change involved.
+const AMENITY_ICONS = [
+  [/gym|fitness/i, LuDumbbell],
+  [/pool|swim/i, LuWaves],
+  [/park/i, LuSquareParking],
+  [/security|guard|cctv|camera/i, LuCctv],
+  [/kids|play/i, LuBaby],
+  [/wifi|broadband|internet/i, LuWifi],
+  [/power|backup|generator/i, LuZap],
+  [/lawn|garden|park(?!ing)/i, LuTrees],
+  [/lift|elevator/i, LuArrowUpDown],
+];
+const amenityIcon = (label) => AMENITY_ICONS.find(([re]) => re.test(label))?.[1] || LuCheck;
+
+function AccordionItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl border border-line">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold text-ink-900"
+      >
+        {question}
+        <LuChevronDown className={`h-4 w-4 shrink-0 text-ink-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <p className="px-4 pb-3 text-sm text-ink-700">{answer}</p>}
+    </div>
+  );
+}
 
 export default function PropertyDetail() {
   const { id } = useParams();
@@ -163,16 +189,29 @@ export default function PropertyDetail() {
       </div>
 
       <p className="mb-1 text-sm font-semibold text-green-600">{formatPrice(property.price)}</p>
-      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm font-semibold text-ink-700">
+      <div className="mb-2 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm font-semibold text-ink-700">
         <Fact icon={LuBedDouble} value={property.bedrooms} label="Beds" />
         <Fact icon={LuBath} value={property.bathrooms} label="Baths" />
         <Fact icon={LuLayers} value={property.areaSqft} label="sqft" />
         <Fact icon={LuBuilding} value={typeLabel(property.propertyType)} />
       </div>
 
-      <div className="card mb-5 p-5">
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[0.8fr_1fr]">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)]">
+      {(property.tags?.length > 0 || property.reraNumber) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {property.tags?.map((t) => (
+            <span key={t} className="rounded-full bg-surface-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink-700">{t}</span>
+          ))}
+          {property.reraNumber && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-600">
+              <LuStamp className="h-3 w-3" /> RERA Approved — {property.reraNumber}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="card mb-5 overflow-hidden p-1.5">
+        <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-[1.6fr_1fr]">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] lg:aspect-auto">
             {sortedMedia[activeImage]?.url && !imageFailed ? (
               <img
                 src={sortedMedia[activeImage].url}
@@ -185,6 +224,22 @@ export default function PropertyDetail() {
                 <LuBuilding className="h-12 w-12 opacity-80" />
               </div>
             )}
+
+            {(property.badge || property.verified) && (
+              <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
+                {property.badge && (
+                  <span className="rounded-full bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-card">
+                    {property.badge}
+                  </span>
+                )}
+                {property.verified && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ink-950/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-card">
+                    <LuShieldCheck className="h-3 w-3" /> Verified
+                  </span>
+                )}
+              </div>
+            )}
+
             {sortedMedia.length > 1 && (
               <>
                 <button
@@ -201,64 +256,99 @@ export default function PropertyDetail() {
                 >
                   <LuChevronRight className="h-4 w-4" />
                 </button>
-                <div className="absolute bottom-3 left-3 flex gap-1.5">
-                  {sortedMedia.map((m, i) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setActiveImage(i)}
-                      className={`h-1.5 rounded-full transition-all ${i === activeImage ? "w-5 bg-white" : "w-1.5 bg-white/60"}`}
-                    />
-                  ))}
-                </div>
               </>
             )}
           </div>
 
-          <div className="min-w-0">
-            {property.description ? (
-              <p className={`text-sm leading-relaxed text-ink-700 ${descExpanded ? "" : "line-clamp-4"}`}>
-                {property.description}{" "}
-                <button type="button" onClick={() => setDescExpanded((v) => !v)} className="font-semibold text-green-600 hover:underline">
-                  {descExpanded ? "Show less" : "Read more"}
-                </button>
-              </p>
-            ) : (
-              <p className="text-sm text-ink-500">No description added yet.</p>
-            )}
-            {property.amenities?.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {property.amenities.map((a) => (
-                  <span key={a} className="rounded-full bg-surface-sunk px-3 py-1 text-xs font-medium text-ink-700">{a}</span>
-                ))}
+          {(() => {
+            const otherMedia = sortedMedia
+              .map((m, i) => ({ ...m, index: i }))
+              .filter((m) => m.index !== activeImage);
+            const visibleThumbs = otherMedia.slice(0, 3);
+            const remaining = otherMedia.length - visibleThumbs.length;
+            if (!visibleThumbs.length) return null;
+            return (
+              <div className="grid grid-cols-2 grid-rows-2 gap-1.5">
+                {visibleThumbs.map((m, i) => {
+                  const isLast = i === visibleThumbs.length - 1 && remaining > 0;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setActiveImage(m.index)}
+                      className={`relative overflow-hidden rounded-xl bg-surface-sunk ${i === 0 ? "col-span-2 row-span-1" : "row-span-1"}`}
+                    >
+                      {m.url ? <img src={m.url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full" />}
+                      {isLast && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-ink-950/60 text-white">
+                          <LuLayoutGrid className="h-4 w-4" />
+                          <span className="text-xs font-bold">+{remaining} More</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-line pt-5 sm:grid-cols-3">
-          <StatInline icon={LuIndianRupee} label="Median price" value={formatPrice(property.price)} />
-          <StatInline icon={LuCalendarDays} label="Weekly median rent" value={formatPrice(estimateFromPrice(property.price, ESTIMATE_RATIOS.weeklyRent))} />
-          <StatInline icon={LuWallet} label="Potential cashflow" value={formatPrice(estimateFromPrice(property.price, ESTIMATE_RATIOS.cashflow))} />
-          <StatInline icon={LuPercent} label="Potential gross yield" value="5.2%" />
-          <StatInline icon={LuGauge} label="Vacancy rate" value="0.6%" />
-          <StatInline icon={LuClock3} label="Listed" value={formatRelative(property.createdAt)} />
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5">
-          <div>
-            <p className="text-xs font-semibold text-ink-500">Potential value</p>
-            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-700">
-              <LuShieldCheck className="h-3 w-3" /> High Confidence
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-x-8 gap-y-2">
-            <StatInline label="Low range" value={formatPrice(estimateFromPrice(property.price, ESTIMATE_RATIOS.low))} icon={LuTrendingUp} />
-            <StatInline label="Med range" value={formatPrice(estimateFromPrice(property.price, ESTIMATE_RATIOS.med))} icon={LuTrendingUp} />
-            <StatInline label="High range" value={formatPrice(estimateFromPrice(property.price, ESTIMATE_RATIOS.high))} icon={LuTrendingUp} />
-          </div>
+            );
+          })()}
         </div>
       </div>
+
+      <div className="card mb-5 p-6">
+        {property.description ? (
+          <p className={`text-sm leading-relaxed text-ink-700 ${descExpanded ? "" : "line-clamp-4"}`}>
+            {property.description}{" "}
+            <button type="button" onClick={() => setDescExpanded((v) => !v)} className="font-semibold text-green-600 hover:underline">
+              {descExpanded ? "Show less" : "Read more"}
+            </button>
+            {descExpanded && property.aboutExtended && (
+              <span className="mt-2 block text-ink-700">{property.aboutExtended}</span>
+            )}
+          </p>
+        ) : (
+          <p className="text-sm text-ink-500">No description added yet.</p>
+        )}
+        {property.amenities?.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-2.5 border-t border-line pt-4 sm:grid-cols-3">
+            {property.amenities.map((a) => {
+              const Icon = amenityIcon(a);
+              return (
+                <span key={a} className="flex items-center gap-2 text-sm text-ink-700">
+                  <Icon className="h-4 w-4 shrink-0 text-red-500" /> {a}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="card mb-5 p-6">
+        <h3 className="mb-4 font-display text-base font-bold text-ink-950">Listing snapshot</h3>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+          <StatInline icon={LuIndianRupee} label="Price" value={formatPrice(property.price)} />
+          <StatInline icon={LuTrendingUp} label="Price / sqft" value={property.areaSqft ? formatPrice(Math.round(property.price / property.areaSqft)) : "—"} />
+          <StatInline icon={LuLayers} label="Super built-up" value={property.areaSqft ? `${property.areaSqft} sqft` : "—"} />
+          {property.carpetAreaSqft != null && <StatInline icon={LuLayers} label="Carpet area" value={`${property.carpetAreaSqft} sqft`} />}
+          <StatInline icon={LuBedDouble} label="Bedrooms" value={property.bedrooms ?? "—"} />
+          <StatInline icon={LuBath} label="Bathrooms" value={property.bathrooms ?? "—"} />
+          {property.facing && <StatInline icon={LuNavigation} label="Facing" value={property.facing} />}
+          <StatInline icon={LuClock3} label="Listed" value={formatRelative(property.createdAt)} />
+        </div>
+      </div>
+
+      {(property.possessionStatus || property.floorNumber || property.furnishing || property.parkingSpots != null || property.ageOfProperty || property.gatedCommunity) && (
+        <div className="card mb-5 p-6">
+          <h3 className="mb-4 font-display text-base font-bold text-ink-950">Property details</h3>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+            {property.possessionStatus && <StatInline icon={LuCalendarCheck} label="Possession" value={property.possessionStatus} />}
+            {property.floorNumber && <StatInline icon={LuBuilding} label="Floor" value={property.totalFloors ? `${property.floorNumber} of ${property.totalFloors} Floors` : `Floor ${property.floorNumber}`} />}
+            {property.furnishing && <StatInline icon={LuSofa} label="Furnishing" value={property.furnishing} />}
+            {property.parkingSpots != null && <StatInline icon={LuCar} label="Parking" value={`${property.parkingSpots} ${property.parkingType || ""}`.trim()} />}
+            {property.ageOfProperty && <StatInline icon={LuClock3} label="Age" value={property.ageOfProperty} />}
+            {property.gatedCommunity && <StatInline icon={LuLock} label="Gated community" value="Yes" />}
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-1">
@@ -271,6 +361,19 @@ export default function PropertyDetail() {
                 <p className="text-xs text-ink-500">{property.brokerName ? "Broker" : property.builderName ? "Builder" : "Team member"}</p>
               </div>
             </div>
+            {property.builderName && (property.builderRating != null || property.builderExperienceYears != null || property.builderProjectsCount != null) && (
+              <div className="mt-3 flex items-center gap-4 border-t border-line pt-3 text-xs text-ink-600">
+                {property.builderRating != null && (
+                  <span className="flex items-center gap-1"><LuStar className="h-3.5 w-3.5 text-amber-500" /> {property.builderRating}</span>
+                )}
+                {property.builderExperienceYears != null && (
+                  <span className="flex items-center gap-1"><LuBriefcase className="h-3.5 w-3.5 text-ink-400" /> {property.builderExperienceYears} yrs</span>
+                )}
+                {property.builderProjectsCount != null && (
+                  <span className="flex items-center gap-1"><LuBuilding className="h-3.5 w-3.5 text-ink-400" /> {property.builderProjectsCount} projects</span>
+                )}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => toast.push("Dialing the listing owner…", "info")}
@@ -327,7 +430,7 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card mb-5 p-6">
         <h3 className="font-display text-base font-bold text-ink-950">Inquiries linked to this listing</h3>
         <p className="mb-4 text-xs text-ink-500">{linkedLeads.length} inquiries generated so far</p>
         {linkedLeads.length === 0 ? (
@@ -346,6 +449,17 @@ export default function PropertyDetail() {
           </div>
         )}
       </div>
+
+      {property.faqs?.length > 0 && (
+        <div className="card p-6">
+          <h3 className="mb-4 font-display text-base font-bold text-ink-950">Frequently asked questions</h3>
+          <div className="space-y-2.5">
+            {property.faqs.map((faq, i) => (
+              <AccordionItem key={i} question={faq.question} answer={faq.answer} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <QuickFormModal
         open={rejectOpen}

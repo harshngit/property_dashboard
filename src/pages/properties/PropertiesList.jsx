@@ -16,6 +16,7 @@ import {
   LuBuilding2,
   LuSlidersHorizontal,
   LuIndianRupee,
+  LuShieldCheck,
 } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import ListStatsStrip from "../../components/common/ListStatsStrip";
@@ -52,6 +53,7 @@ export default function PropertiesList() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [txnFilter, setTxnFilter] = useState("All");
+  const [badgeFilter, setBadgeFilter] = useState("All");
   const [toDelete, setToDelete] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [priceTarget, setPriceTarget] = useState(null);
@@ -69,9 +71,10 @@ export default function PropertiesList() {
       const matchesType = typeFilter === "All" || row.propertyType === typeFilter;
       const matchesStatus = statusFilter === "All" || row.status === statusFilter;
       const matchesTxn = txnFilter === "All" || row.transactionType === txnFilter;
-      return matchesQuery && matchesType && matchesStatus && matchesTxn;
+      const matchesBadge = badgeFilter === "All" || (badgeFilter === "VERIFIED" ? row.verified : row.badge === badgeFilter);
+      return matchesQuery && matchesType && matchesStatus && matchesTxn && matchesBadge;
     });
-  }, [rows, query, typeFilter, statusFilter, txnFilter]);
+  }, [rows, query, typeFilter, statusFilter, txnFilter, badgeFilter]);
 
   const propertyStats = [
     { label: "Total Listings", value: rows.length, meta: "all properties" },
@@ -178,6 +181,16 @@ export default function PropertiesList() {
               options={["All", ...TRANSACTION_TYPES.map((t) => ({ value: t, label: typeLabel(t) }))]}
             />
           </div>
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm shadow-card">
+            <LuShieldCheck className="h-4 w-4 text-ink-500/70" />
+            <Select
+              variant="ghost"
+              className="min-w-[8.5rem]"
+              value={badgeFilter}
+              onChange={setBadgeFilter}
+              options={["All", "FEATURED", "VERIFIED", "NEW LISTING"]}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -231,6 +244,16 @@ export default function PropertiesList() {
 
                 <div className="mt-3 flex min-h-[30px] flex-wrap gap-1.5">
                   <StatusBadge value={STATUS_LABELS[row.status] || row.status} />
+                  {row.badge && (
+                    <span className="rounded-full bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                      {row.badge}
+                    </span>
+                  )}
+                  {row.verified && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-ink-950 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                      <LuShieldCheck className="h-3 w-3" /> Verified
+                    </span>
+                  )}
                   <span className="rounded-full bg-surface-muted px-2.5 py-1 text-[10px] font-semibold text-ink-700">{typeLabel(row.propertyType)}</span>
                   <span className="rounded-full bg-surface-muted px-2.5 py-1 text-[10px] font-semibold text-ink-700">{typeLabel(row.transactionType)}</span>
                 </div>

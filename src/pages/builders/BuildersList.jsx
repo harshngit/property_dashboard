@@ -27,6 +27,9 @@ const FIELDS = [
   { key: "email", label: "Email", placeholder: "name@propertyserch.com" },
   { key: "mobile", label: "Mobile", placeholder: "9876543210" },
   { key: "status", label: "Status", type: "select", options: STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_LABEL[s] })) },
+  { key: "rating", label: "Rating (out of 5)", type: "number", placeholder: "e.g. 4.9" },
+  { key: "experienceYears", label: "Experience (years)", type: "number", placeholder: "e.g. 40" },
+  { key: "portfolioProjectsCount", label: "Portfolio projects", type: "number", placeholder: "e.g. 32" },
 ];
 
 const INVITE_FIELDS = [

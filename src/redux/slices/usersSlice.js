@@ -15,6 +15,14 @@ const normalizeUserRow = (u) => ({
   lastLoginAt: u.lastLoginAt || u.last_login_at,
   createdAt: u.createdAt || u.created_at,
   updatedAt: u.updatedAt || u.updated_at,
+  // Builder profile fields (only meaningful for role=builder rows) - shown
+  // on their listings via propertiesSlice's denormalized builderRating/etc.
+  rating: u.rating,
+  experienceYears: u.experienceYears ?? u.experience_years,
+  // Named distinctly from BuildersList.jsx's client-derived projectCount -
+  // this is a self-reported portfolio total, not the count of projects
+  // actually tracked in this system.
+  portfolioProjectsCount: u.portfolioProjectsCount ?? u.portfolio_projects_count,
 });
 
 export const fetchUsers = createAsyncThunk(
@@ -63,6 +71,9 @@ export const updateUser = createAsyncThunk(
       if (patch.mobile !== undefined) body.mobile = patch.mobile;
       if (patch.status !== undefined) body.status = patch.status;
       if (patch.tenantId !== undefined) body.tenantId = patch.tenantId;
+      if (patch.rating !== undefined) body.rating = patch.rating;
+      if (patch.experienceYears !== undefined) body.experienceYears = patch.experienceYears;
+      if (patch.portfolioProjectsCount !== undefined) body.portfolioProjectsCount = patch.portfolioProjectsCount;
       const res = await apiRequest(`/users/${id}`, {
         method: "PUT",
         body,
