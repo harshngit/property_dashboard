@@ -82,6 +82,25 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+// Login-only on the dashboard (allowSelfRegister omitted/false) - a Google
+// account with no matching CRM user gets a 404 from the backend rather than
+// auto-creating one, since dashboard accounts are provisioned by an admin,
+// not self-service.
+export const googleLogin = createAsyncThunk(
+  "auth/googleLogin",
+  async ({ idToken }, { rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/auth/google", {
+        method: "POST",
+        body: { idToken },
+      });
+      return { ...res.data, user: normalizeUser(res.data.user) };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const sendOtp = createAsyncThunk(
   "auth/sendOtp",
   async ({ identifier, purpose }, { rejectWithValue }) => {
@@ -273,7 +292,7 @@ export const activateUserAccount = createAsyncThunk(
 );
 
 const authThunks = [
-  registerUser, loginUser, sendOtp, verifyOtp, refreshAccessToken,
+  registerUser, loginUser, googleLogin, sendOtp, verifyOtp, refreshAccessToken,
   forgotPassword, resetPassword, fetchCurrentUser, updateProfile, changePassword,
   uploadProfilePicture, deleteProfilePicture, activateUserAccount,
 ];
@@ -318,6 +337,17 @@ const authSlice = createSlice({
         state.registeredUser = action.payload;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.user = action.payload.user;
+        state.accessToken = action.payload.accessToken;
+        state.refreshToken = action.payload.refreshToken;
+        persistSession({
+          user: action.payload.user,
+          accessToken: action.payload.accessToken,
+          refreshToken: action.payload.refreshToken,
+        });
+      })
+      .addCase(googleLogin.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
