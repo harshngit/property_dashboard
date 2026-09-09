@@ -82,17 +82,19 @@ export const loginUser = createAsyncThunk(
   }
 );
 
-// Login-only on the dashboard (allowSelfRegister omitted/false) - a Google
-// account with no matching CRM user gets a 404 from the backend rather than
-// auto-creating one, since dashboard accounts are provisioned by an admin,
-// not self-service.
+// Same endpoint for both login and self-service signup. `allowSelfRegister`
+// omitted/false (the Login page's usage) means a Google account with no
+// matching CRM user gets a 404 instead of auto-creating one. Passing it true
+// (the Register page's usage) lets the backend create the account on first
+// sign-in with the given role/tenantId - mirrors registerUser's role/tenantId
+// handling, just without a password.
 export const googleLogin = createAsyncThunk(
   "auth/googleLogin",
-  async ({ idToken }, { rejectWithValue }) => {
+  async ({ idToken, allowSelfRegister, role, tenantId }, { rejectWithValue }) => {
     try {
       const res = await apiRequest("/auth/google", {
         method: "POST",
-        body: { idToken },
+        body: { idToken, allowSelfRegister, role, tenantId },
       });
       return { ...res.data, user: normalizeUser(res.data.user) };
     } catch (err) {

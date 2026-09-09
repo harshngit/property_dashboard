@@ -214,7 +214,7 @@ export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, accessToken, error } = useSelector((s) => s.auth);
+  const { user, accessToken } = useSelector((s) => s.auth);
   const [mode, setMode] = useState("password"); // password | otp
 
   useEffect(() => () => dispatch(clearAuthError()), [dispatch]);
@@ -248,11 +248,6 @@ export default function Login() {
         <div className="mt-3">
           <GoogleLoginButton onCredential={handleGoogleCredential} />
         </div>
-        {error && (
-          <div className="mt-3 rounded-2xl border border-coral-200 bg-coral-50 px-4 py-3 text-xs font-medium text-coral-600">
-            {error}
-          </div>
-        )}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl bg-surface-muted p-1">

@@ -2,18 +2,18 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { LuUser, LuMail, LuPhone, LuLock, LuUserPlus, LuCircleCheck, LuEye, LuEyeOff } from "react-icons/lu";
-import { FaGoogle } from "react-icons/fa";
 import AuthLayout from "../../layouts/AuthLayout";
-import { registerUser, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
+import GoogleLoginButton from "../../components/common/GoogleLoginButton";
+import { registerUser, googleLogin, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { ROLES, ROLE_LABELS } from "../../config/roles";
 
-const SELF_SERVICE_ROLES = [ROLES.AGENCY_ADMIN, ROLES.CUSTOMER, ROLES.BROKER];
+const SELF_SERVICE_ROLES = [ROLES.AGENCY_ADMIN, ROLES.CUSTOMER, ROLES.BROKER, ROLES.BUILDER];
 
 export default function Register() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { status, error, registeredUser } = useSelector((s) => s.auth);
+  const { status, error, registeredUser, user, accessToken } = useSelector((s) => s.auth);
   const [form, setForm] = useState({
     fullName: "", email: "", mobile: "", password: "", confirm: "", role: ROLES.BROKER,
   });
@@ -26,6 +26,12 @@ export default function Register() {
     dispatch(clearRegisteredUser());
   }, [dispatch]);
 
+  // Google signup logs the account straight in (unlike the password flow,
+  // which only creates the account and sends them to sign in separately).
+  useEffect(() => {
+    if (user && accessToken) navigate("/app/dashboard", { replace: true });
+  }, [user, accessToken, navigate]);
+
   const mismatch = touched && form.confirm && form.confirm !== form.password;
 
   const submit = (e) => {
@@ -33,6 +39,10 @@ export default function Register() {
     setTouched(true);
     if (form.password !== form.confirm) return;
     dispatch(registerUser(form));
+  };
+
+  const handleGoogleCredential = (idToken) => {
+    dispatch(googleLogin({ idToken, allowSelfRegister: true, role: form.role }));
   };
 
   if (registeredUser) {
@@ -73,13 +83,9 @@ export default function Register() {
         </div>
         <h1 className="auth-panel-title">Create an account</h1>
         <p className="auth-panel-copy">Access your tasks, notes, and projects anytime, anywhere - and keep everything flowing in one place.</p>
-        <button
-          type="button"
-          className="mt-3 flex min-h-[40px] w-full items-center justify-center gap-2.5 rounded-2xl border border-line bg-white px-4 text-[13px] font-medium text-ink-900 transition-colors hover:border-red-200 hover:bg-red-50/40"
-        >
-          <FaGoogle className="h-4 w-4 text-[#4285F4]" />
-          Sign up with Google
-        </button>
+        <div className="mt-3">
+          <GoogleLoginButton onCredential={handleGoogleCredential} text="signup_with" />
+        </div>
       </div>
 
       <form onSubmit={submit} className="space-y-3">
@@ -113,7 +119,7 @@ export default function Register() {
 
         <div>
           <label className="field-label">Register as</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {SELF_SERVICE_ROLES.map((r) => (
               <button
                 type="button"
