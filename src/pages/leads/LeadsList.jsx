@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { LuPlus, LuEye, LuPencil, LuUserCheck, LuPhone, LuMessageCircle } from "react-icons/lu";
+import { LuPlus, LuEye, LuPencil, LuUserCheck, LuPhone, LuMessageCircle, LuTrash2 } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
 import StatusBadge from "../../components/common/StatusBadge";
 import Avatar from "../../components/common/Avatar";
 import QuickFormModal from "../../components/common/QuickFormModal";
+import { ConfirmDialog } from "../../components/common/Modal";
 import { ROLES } from "../../config/roles";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
-import { fetchLeads, assignLead, updateLeadStatus, clearLeadsError } from "../../redux/slices/leadsSlice";
+import { fetchLeads, assignLead, updateLeadStatus, deleteLead, bulkDeleteLeads, clearLeadsError } from "../../redux/slices/leadsSlice";
 import { fetchUsers } from "../../redux/slices/usersSlice";
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "hot", "warm", "cold", "won", "lost"];
@@ -41,6 +42,8 @@ export default function LeadsList() {
   const { list: users } = useSelector((s) => s.users);
 
   const [assignTarget, setAssignTarget] = useState(null);
+  const [toDelete, setToDelete] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
 
   useEffect(() => {
     dispatch(fetchLeads({ limit: 100 }));
@@ -87,7 +90,22 @@ export default function LeadsList() {
     { label: "Reassign owner", icon: LuUserCheck, onClick: () => setAssignTarget(row), hidden: !permissions.edit },
     { label: "Call customer", icon: LuPhone, onClick: () => toast.push(`Dialing ${row.customerMobile || "—"}…`, "info") },
     { label: "WhatsApp", icon: LuMessageCircle, onClick: () => navigate("/app/whatsapp") },
+    { label: "Delete lead", icon: LuTrash2, tone: "danger", onClick: () => setToDelete(row), hidden: !permissions.delete },
   ];
+
+  const confirmDelete = async () => {
+    const res = await dispatch(deleteLead(toDelete.id));
+    if (deleteLead.fulfilled.match(res)) toast.push(`${toDelete.customerName || "Lead"} deleted.`, "success");
+    else toast.push(res.payload || "Failed to delete lead.", "error");
+    setToDelete(null);
+  };
+
+  const confirmBulkDelete = async () => {
+    const res = await dispatch(bulkDeleteLeads(bulkDeleteIds));
+    if (bulkDeleteLeads.fulfilled.match(res)) toast.push(`${res.payload.deletedCount} lead(s) deleted.`, "success");
+    else toast.push(res.payload || "Failed to delete leads.", "error");
+    setBulkDeleteIds(null);
+  };
 
   const handleAssignSave = async (data) => {
     const res = await dispatch(assignLead({ id: assignTarget.id, assignedTo: data.assignedTo }));
@@ -132,6 +150,7 @@ export default function LeadsList() {
           { key: "status", label: "Status", options: LEAD_STATUSES },
         ]}
         getActions={getActions}
+        onBulkDelete={permissions.delete ? setBulkDeleteIds : undefined}
         renderCard={(r) => (
           <div>
             <div className="flex items-center gap-3">
@@ -167,6 +186,20 @@ export default function LeadsList() {
         fields={[{ key: "assignedTo", label: "Assign to", type: "select", options: assigneeOptions, full: true }]}
         initial={{ assignedTo: assignTarget?.assignedTo || assigneeOptions[0]?.value }}
         submitLabel="Reassign"
+      />
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete this lead?"
+        description={`${toDelete?.customerName || "This lead"} and its timeline/notes will be permanently removed.`}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteIds}
+        onClose={() => setBulkDeleteIds(null)}
+        onConfirm={confirmBulkDelete}
+        title={`Delete ${bulkDeleteIds?.length || 0} leads?`}
+        description="These leads and their timelines/notes will be permanently removed."
       />
     </div>
   );

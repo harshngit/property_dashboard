@@ -135,7 +135,35 @@ export const closeDeal = createAsyncThunk(
   }
 );
 
-const mutationThunks = [createDeal, updateDeal, updateDealStage, closeDeal];
+export const deleteDeal = createAsyncThunk(
+  "deals/deleteDeal",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/deals/${id}`, { method: "DELETE", token: getState().auth.accessToken });
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const bulkDeleteDeals = createAsyncThunk(
+  "deals/bulkDeleteDeals",
+  async (ids, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/deals/bulk-delete", {
+        method: "POST",
+        body: { ids },
+        token: getState().auth.accessToken,
+      });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+const mutationThunks = [createDeal, updateDeal, updateDealStage, closeDeal, deleteDeal, bulkDeleteDeals];
 
 const dealsSlice = createSlice({
   name: "deals",
@@ -168,6 +196,13 @@ const dealsSlice = createSlice({
       })
       .addCase(createDeal.fulfilled, (state, action) => {
         state.list = [action.payload, ...state.list];
+      })
+      .addCase(deleteDeal.fulfilled, (state, action) => {
+        state.list = state.list.filter((d) => d.id !== action.payload);
+      })
+      .addCase(bulkDeleteDeals.fulfilled, (state, action) => {
+        const deleted = new Set(action.payload.deletedIds);
+        state.list = state.list.filter((d) => !deleted.has(d.id));
       })
       .addMatcher(
         (action) => [updateDeal, updateDealStage, closeDeal].some((t) => t.fulfilled.match(action)),

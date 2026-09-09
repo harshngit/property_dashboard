@@ -28,7 +28,7 @@ import QuickFormModal from "../../components/common/QuickFormModal";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
 import {
-  fetchProperties, deleteProperty, approveProperty, rejectProperty,
+  fetchProperties, deleteProperty, bulkDeleteProperties, approveProperty, rejectProperty,
   updatePropertyAvailability, updatePropertyPrice, clearPropertiesError,
 } from "../../redux/slices/propertiesSlice";
 
@@ -57,11 +57,32 @@ export default function PropertiesList() {
   const [toDelete, setToDelete] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [priceTarget, setPriceTarget] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProperties({ limit: 100 }));
     return () => dispatch(clearPropertiesError());
   }, [dispatch]);
+
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => rows.some((row) => row.id === id)));
+  }, [rows]);
+
+  const toggleSelection = (id) => {
+    setSelectedIds((current) => (current.includes(id) ? current.filter((rowId) => rowId !== id) : [...current, id]));
+  };
+
+  const confirmBulkDelete = async () => {
+    const res = await dispatch(bulkDeleteProperties(selectedIds));
+    if (bulkDeleteProperties.fulfilled.match(res)) {
+      toast.push(`${res.payload.deletedCount} listing(s) deleted.`, "success");
+      setSelectedIds([]);
+    } else {
+      toast.push(res.payload || "Failed to delete listings.", "error");
+    }
+    setBulkConfirmOpen(false);
+  };
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -213,6 +234,28 @@ export default function PropertiesList() {
 
       <ListStatsStrip items={propertyStats} />
 
+      {permissions.delete && selectedIds.length > 0 && (
+        <div className="mb-4 flex justify-center">
+          <div className="flex flex-wrap items-center gap-2 rounded-[18px] border border-[#E9EBF1] bg-white px-4 py-3 shadow-[0_18px_34px_-24px_rgba(17,20,43,0.25)]">
+            <span className="pr-2 text-sm font-semibold text-ink-500">{selectedIds.length} Selected</span>
+            <button
+              type="button"
+              onClick={() => setBulkConfirmOpen(true)}
+              className="btn-outline btn-sm rounded-xl border-coral-200 text-coral-600 hover:bg-coral-50"
+            >
+              <LuTrash2 className="h-4 w-4" /> Delete
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ECEEF4] text-ink-500 hover:bg-surface-sunk"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       {status === "loading" && rows.length === 0 ? (
         <div className="rounded-[24px] border border-line bg-white px-6 py-16 text-center text-sm text-ink-500">
           Loading properties…
@@ -228,6 +271,16 @@ export default function PropertiesList() {
                   className="h-[300px] w-full rounded-[18px] object-cover"
                 />
                 <div className="absolute inset-x-3.5 bottom-0 h-8 rounded-b-[18px] bg-[linear-gradient(180deg,transparent,rgba(17,20,43,0.12))]" />
+                {permissions.delete && (
+                  <label className="absolute left-6 top-6 flex h-6 w-6 items-center justify-center rounded-md bg-white/90 shadow-card">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(row.id)}
+                      onChange={() => toggleSelection(row.id)}
+                      className="h-4 w-4 rounded border-line text-[#ff512f] focus:ring-[#dd2476]"
+                    />
+                  </label>
+                )}
               </div>
 
               <div className="flex flex-1 flex-col px-4 pb-4 pt-4">
@@ -322,6 +375,14 @@ export default function PropertiesList() {
         onConfirm={confirmDelete}
         title="Delete this listing?"
         description={`${toDelete?.title} will be removed and unlinked from any open leads.`}
+      />
+
+      <ConfirmDialog
+        open={bulkConfirmOpen}
+        onClose={() => setBulkConfirmOpen(false)}
+        onConfirm={confirmBulkDelete}
+        title={`Delete ${selectedIds.length} listings?`}
+        description="These listings will be removed and unlinked from any open leads."
       />
     </div>
   );

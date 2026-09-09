@@ -10,7 +10,7 @@ import { ROLES, ROLE_LABELS, ROLE_BADGE_CLASS } from "../../config/roles";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
 import {
-  fetchUsers, updateUser, deleteUser, changeUserRole, resetUserPassword, clearUsersError,
+  fetchUsers, updateUser, deleteUser, bulkDeleteUsers, changeUserRole, resetUserPassword, clearUsersError,
 } from "../../redux/slices/usersSlice";
 import { registerUser, activateUserAccount, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
 
@@ -52,6 +52,7 @@ export default function UsersPage() {
   const { registeredUser, error: inviteError, status: inviteStatus } = useSelector((s) => s.auth);
 
   const [toDelete, setToDelete] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [editing, setEditing] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -229,6 +230,17 @@ export default function UsersPage() {
     setToDelete(null);
   };
 
+  const handleBulkDelete = async () => {
+    const ids = bulkDeleteIds.filter((id) => id !== user?.id);
+    const res = await dispatch(bulkDeleteUsers(ids));
+    if (bulkDeleteUsers.fulfilled.match(res)) {
+      toast.push(`${res.payload.deletedCount} user(s) removed.`, "success");
+    } else {
+      toast.push(res.payload || "Failed to remove users.", "error");
+    }
+    setBulkDeleteIds(null);
+  };
+
   const handleKanbanDrop = async (row, status) => {
     const res = await dispatch(updateUser({ id: row.id, status }));
     if (updateUser.fulfilled.match(res)) {
@@ -257,6 +269,7 @@ export default function UsersPage() {
           { key: "status", label: "Status", options: STATUS_OPTIONS },
         ]}
         getActions={getActions}
+        onBulkDelete={setBulkDeleteIds}
         renderCard={(r) => (
           <div>
             <div className="flex items-center gap-3">
@@ -318,6 +331,12 @@ export default function UsersPage() {
         open={!!toDelete} onClose={() => setToDelete(null)}
         onConfirm={handleDelete}
         title="Remove this user?" description={`${toDelete?.name} will lose access immediately.`}
+      />
+
+      <ConfirmDialog
+        open={!!bulkDeleteIds} onClose={() => setBulkDeleteIds(null)}
+        onConfirm={handleBulkDelete}
+        title={`Remove ${bulkDeleteIds?.length || 0} users?`} description="They will lose access immediately."
       />
     </div>
   );

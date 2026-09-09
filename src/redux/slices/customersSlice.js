@@ -10,6 +10,10 @@ const normalizeCustomer = (c) => ({
   email: c.email,
   mobile: c.mobile,
   createdByName: c.created_by_name,
+  // Only present when this customer record is linked to a login account
+  // (c.user_id) - null for a CRM-only contact with no account of its own.
+  accountSignupSource: c.account_signup_source || null,
+  accountStatus: c.account_status || null,
   createdAt: c.created_at,
   updatedAt: c.updated_at,
 });
@@ -86,6 +90,34 @@ export const updateCustomer = createAsyncThunk(
         token: getState().auth.accessToken,
       });
       return normalizeCustomer(res.data);
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const deleteCustomer = createAsyncThunk(
+  "customers/deleteCustomer",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/customers/${id}`, { method: "DELETE", token: getState().auth.accessToken });
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const bulkDeleteCustomers = createAsyncThunk(
+  "customers/bulkDeleteCustomers",
+  async (ids, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/customers/bulk-delete", {
+        method: "POST",
+        body: { ids },
+        token: getState().auth.accessToken,
+      });
+      return res.data;
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -221,6 +253,13 @@ const customersSlice = createSlice({
       .addCase(updateCustomer.fulfilled, (state, action) => {
         state.list = state.list.map((c) => (c.id === action.payload.id ? action.payload : c));
         if (state.current?.id === action.payload.id) state.current = action.payload;
+      })
+      .addCase(deleteCustomer.fulfilled, (state, action) => {
+        state.list = state.list.filter((c) => c.id !== action.payload);
+      })
+      .addCase(bulkDeleteCustomers.fulfilled, (state, action) => {
+        const deleted = new Set(action.payload.deletedIds);
+        state.list = state.list.filter((c) => !deleted.has(c.id));
       })
       .addCase(fetchCustomerProfile.pending, (state) => {
         state.profileStatus = "loading";

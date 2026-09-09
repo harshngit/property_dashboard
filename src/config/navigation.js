@@ -1,7 +1,7 @@
 import {
   LuLayoutDashboard, LuUsers, LuBuilding2, LuUserRound, LuHandshake,
   LuFileStack, LuWallet, LuMessageCircle, LuSparkles, LuChartColumn,
-  LuListChecks, LuSettings, LuShieldCheck, LuNetwork,
+  LuListChecks, LuSettings, LuShieldCheck, LuNetwork, LuLandmark,
 } from "react-icons/lu";
 import { MODULES } from "./roles";
 
@@ -13,6 +13,7 @@ export const NAV_ITEMS = [
   { key: MODULES.BROKERS, label: "Brokers", to: "/app/brokers", icon: LuUsers },
   { key: MODULES.AGENCIES, label: "Agencies", to: "/app/agencies", icon: LuNetwork },
   { key: MODULES.BUILDERS, label: "Builders", to: "/app/builders", icon: LuBuilding2 },
+  { key: MODULES.PROJECTS, label: "Projects", to: "/app/projects", icon: LuLandmark },
   { key: MODULES.DEALS, label: "Deal Pipeline", to: "/app/deals", icon: LuChartColumn },
   { key: MODULES.TASKS, label: "Tasks & Follow-ups", to: "/app/tasks", icon: LuListChecks },
   { key: MODULES.DOCUMENTS, label: "Documents", to: "/app/documents", icon: LuFileStack },

@@ -168,7 +168,35 @@ export const fetchLeadTimeline = createAsyncThunk(
   }
 );
 
-const mutationThunks = [createLead, updateLead, assignLead, updateLeadStatus, addLeadNote];
+export const deleteLead = createAsyncThunk(
+  "leads/deleteLead",
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/leads/${id}`, { method: "DELETE", token: getState().auth.accessToken });
+      return id;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const bulkDeleteLeads = createAsyncThunk(
+  "leads/bulkDeleteLeads",
+  async (ids, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/leads/bulk-delete", {
+        method: "POST",
+        body: { ids },
+        token: getState().auth.accessToken,
+      });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+const mutationThunks = [createLead, updateLead, assignLead, updateLeadStatus, addLeadNote, deleteLead, bulkDeleteLeads];
 
 const leadsSlice = createSlice({
   name: "leads",
@@ -223,6 +251,13 @@ const leadsSlice = createSlice({
       })
       .addCase(createLead.fulfilled, (state, action) => {
         state.list = [action.payload, ...state.list];
+      })
+      .addCase(deleteLead.fulfilled, (state, action) => {
+        state.list = state.list.filter((l) => l.id !== action.payload);
+      })
+      .addCase(bulkDeleteLeads.fulfilled, (state, action) => {
+        const deleted = new Set(action.payload.deletedIds);
+        state.list = state.list.filter((l) => !deleted.has(l.id));
       })
       .addMatcher(
         (action) => [updateLead, assignLead, updateLeadStatus].some((t) => t.fulfilled.match(action)),

@@ -12,6 +12,7 @@ const normalizeUserRow = (u) => ({
   profilePictureUrl: u.profilePictureUrl || u.profile_picture_url,
   emailVerified: u.emailVerified ?? u.email_verified,
   mobileVerified: u.mobileVerified ?? u.mobile_verified,
+  signupSource: u.signupSource || u.signup_source,
   lastLoginAt: u.lastLoginAt || u.last_login_at,
   createdAt: u.createdAt || u.created_at,
   updatedAt: u.updatedAt || u.updated_at,
@@ -98,6 +99,22 @@ export const deleteUser = createAsyncThunk(
   }
 );
 
+export const bulkDeleteUsers = createAsyncThunk(
+  "users/bulkDeleteUsers",
+  async (ids, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/users/bulk-delete", {
+        method: "POST",
+        body: { ids },
+        token: getState().auth.accessToken,
+      });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const changeUserRole = createAsyncThunk(
   "users/changeUserRole",
   async ({ id, role }, { getState, rejectWithValue }) => {
@@ -130,7 +147,7 @@ export const resetUserPassword = createAsyncThunk(
   }
 );
 
-const mutationThunks = [updateUser, deleteUser, changeUserRole, resetUserPassword];
+const mutationThunks = [updateUser, deleteUser, bulkDeleteUsers, changeUserRole, resetUserPassword];
 
 const usersSlice = createSlice({
   name: "users",
@@ -176,6 +193,10 @@ const usersSlice = createSlice({
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.list = state.list.filter((u) => u.id !== action.payload);
+      })
+      .addCase(bulkDeleteUsers.fulfilled, (state, action) => {
+        const deleted = new Set(action.payload.deletedIds);
+        state.list = state.list.filter((u) => !deleted.has(u.id));
       })
       .addCase(changeUserRole.fulfilled, (state, action) => {
         state.list = state.list.map((u) => (u.id === action.payload.id ? { ...u, ...action.payload } : u));

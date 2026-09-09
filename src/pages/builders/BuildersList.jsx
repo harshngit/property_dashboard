@@ -9,7 +9,7 @@ import QuickFormModal from "../../components/common/QuickFormModal";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
 import { ROLES } from "../../config/roles";
-import { fetchUsers, updateUser, deleteUser, clearUsersError } from "../../redux/slices/usersSlice";
+import { fetchUsers, updateUser, deleteUser, bulkDeleteUsers, clearUsersError } from "../../redux/slices/usersSlice";
 import { activateUserAccount, registerUser, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
 import { fetchProjects } from "../../redux/slices/projectsSlice";
 
@@ -48,6 +48,7 @@ export default function BuildersList() {
   const { registeredUser, error: inviteError, status: inviteStatus } = useSelector((s) => s.auth);
 
   const [toDelete, setToDelete] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [editing, setEditing] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -155,6 +156,13 @@ export default function BuildersList() {
     setToDelete(null);
   };
 
+  const handleBulkDelete = async () => {
+    const res = await dispatch(bulkDeleteUsers(bulkDeleteIds));
+    if (bulkDeleteUsers.fulfilled.match(res)) toast.push(`${res.payload.deletedCount} builder(s) removed.`, "success");
+    else toast.push(res.payload || "Failed to remove builders.", "error");
+    setBulkDeleteIds(null);
+  };
+
   const handleKanbanDrop = (row, newStatus) => handleStatus(row, newStatus);
 
   const builderStats = [
@@ -180,6 +188,7 @@ export default function BuildersList() {
         searchKeys={["name", "email", "mobile", "tenantName"]}
         filters={[{ key: "status", label: "Status", options: STATUS_OPTIONS }]}
         getActions={getActions}
+        onBulkDelete={permissions.delete ? setBulkDeleteIds : undefined}
         renderCard={(r) => (
           <div>
             <div className="flex items-center gap-3">
@@ -230,6 +239,13 @@ export default function BuildersList() {
         onConfirm={handleDelete}
         title="Remove this builder?"
         description={`${toDelete?.name}'s projects and units will need to be reassigned.`}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteIds}
+        onClose={() => setBulkDeleteIds(null)}
+        onConfirm={handleBulkDelete}
+        title={`Remove ${bulkDeleteIds?.length || 0} builders?`}
+        description="Their projects and units will need to be reassigned."
       />
     </div>
   );

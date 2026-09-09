@@ -37,6 +37,7 @@ export const MODULES = {
   BROKERS: "brokers",
   AGENCIES: "agencies",
   BUILDERS: "builders",
+  PROJECTS: "projects",
   DEALS: "deals",
   DOCUMENTS: "documents",
   PAYMENTS: "payments",
@@ -57,7 +58,7 @@ export const ROLE_ACCESS = {
   [ROLES.ADMIN]: {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.PROPERTIES, MODULES.CUSTOMERS,
-      MODULES.BROKERS, MODULES.AGENCIES, MODULES.BUILDERS, MODULES.DEALS,
+      MODULES.BROKERS, MODULES.AGENCIES, MODULES.BUILDERS, MODULES.PROJECTS, MODULES.DEALS,
       MODULES.DOCUMENTS, MODULES.PAYMENTS, MODULES.WHATSAPP, MODULES.AI,
       MODULES.REPORTS, MODULES.TASKS, MODULES.USERS,
     ],
@@ -79,7 +80,7 @@ export const ROLE_ACCESS = {
     actions: { create: true, edit: true, delete: false, approve: false, export: false },
   },
   [ROLES.BUILDER]: {
-    modules: [MODULES.DASHBOARD, MODULES.PROPERTIES, MODULES.LEADS, MODULES.DEALS, MODULES.REPORTS],
+    modules: [MODULES.DASHBOARD, MODULES.PROPERTIES, MODULES.PROJECTS, MODULES.LEADS, MODULES.DEALS, MODULES.REPORTS],
     actions: { create: true, edit: true, delete: false, approve: false, export: true },
   },
   [ROLES.SALES]: {

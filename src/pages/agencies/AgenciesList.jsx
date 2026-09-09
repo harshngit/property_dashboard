@@ -8,7 +8,7 @@ import { ConfirmDialog } from "../../components/common/Modal";
 import QuickFormModal from "../../components/common/QuickFormModal";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
-import { fetchAgencies, createAgency, updateAgency, deleteAgency, clearAgenciesError } from "../../redux/slices/agenciesSlice";
+import { fetchAgencies, createAgency, updateAgency, deleteAgency, bulkDeleteAgencies, clearAgenciesError } from "../../redux/slices/agenciesSlice";
 
 const STATUS_OPTIONS = ["active", "inactive"];
 const STATUS_LABEL = { active: "Active", inactive: "Inactive" };
@@ -26,6 +26,7 @@ export default function AgenciesList() {
   const { list: rows, status } = useSelector((s) => s.agencies);
 
   const [toDelete, setToDelete] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [editing, setEditing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -77,6 +78,13 @@ export default function AgenciesList() {
     setToDelete(null);
   };
 
+  const handleBulkDelete = async () => {
+    const res = await dispatch(bulkDeleteAgencies(bulkDeleteIds));
+    if (bulkDeleteAgencies.fulfilled.match(res)) toast.push(`${res.payload.deletedCount} agency(ies) removed.`, "success");
+    else toast.push(res.payload || "Failed to remove agencies.", "error");
+    setBulkDeleteIds(null);
+  };
+
   const agencyStats = [
     { label: "Total Agencies", value: rows.length, meta: "onboarded partners" },
     { label: "Active Agencies", value: rows.filter((row) => row.status === "active").length, meta: "currently operating" },
@@ -100,6 +108,7 @@ export default function AgenciesList() {
         searchKeys={["name", "slug"]}
         filters={[{ key: "status", label: "Status", options: STATUS_OPTIONS.map((s) => STATUS_LABEL[s]) }]}
         getActions={getActions}
+        onBulkDelete={permissions.delete ? setBulkDeleteIds : undefined}
         renderCard={(r) => (
           <div>
             <p className="font-semibold text-ink-900">{r.name}</p>
@@ -130,6 +139,11 @@ export default function AgenciesList() {
         open={!!toDelete} onClose={() => setToDelete(null)}
         onConfirm={handleDelete}
         title="Remove this agency?" description={`${toDelete?.name} and its broker access will be revoked.`}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteIds} onClose={() => setBulkDeleteIds(null)}
+        onConfirm={handleBulkDelete}
+        title={`Remove ${bulkDeleteIds?.length || 0} agencies?`} description="These agencies and their broker access will be revoked."
       />
     </div>
   );

@@ -24,6 +24,7 @@ import BrokersList from "./pages/brokers/BrokersList";
 import BrokerDetail from "./pages/brokers/BrokerDetail";
 import AgenciesList from "./pages/agencies/AgenciesList";
 import BuildersList from "./pages/builders/BuildersList";
+import ProjectsList from "./pages/projects/ProjectsList";
 import DealsList from "./pages/deals/DealsList";
 import TasksPage from "./pages/tasks/TasksPage";
 import DocumentsPage from "./pages/documents/DocumentsPage";
@@ -82,6 +83,10 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.BUILDERS} />}>
             <Route path="builders" element={<BuildersList />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.PROJECTS} />}>
+            <Route path="projects" element={<ProjectsList />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.DEALS} />}>

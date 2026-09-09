@@ -161,6 +161,22 @@ export const deleteProperty = createAsyncThunk(
   }
 );
 
+export const bulkDeleteProperties = createAsyncThunk(
+  "properties/bulkDeleteProperties",
+  async (ids, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/properties/bulk-delete", {
+        method: "POST",
+        body: { ids },
+        token: getState().auth.accessToken,
+      });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
 export const updatePropertyPrice = createAsyncThunk(
   "properties/updatePropertyPrice",
   async ({ id, price }, { getState, rejectWithValue }) => {
@@ -318,6 +334,10 @@ const propertiesSlice = createSlice({
       .addCase(deleteProperty.fulfilled, (state, action) => {
         state.list = state.list.filter((p) => p.id !== action.payload);
       })
+      .addCase(bulkDeleteProperties.fulfilled, (state, action) => {
+        const deleted = new Set(action.payload.deletedIds);
+        state.list = state.list.filter((p) => !deleted.has(p.id));
+      })
       .addCase(uploadPropertyMedia.fulfilled, (state, action) => {
         if (state.current?.id === action.payload.propertyId) {
           state.current.media = [...state.current.media, action.payload.media];
@@ -342,16 +362,16 @@ const propertiesSlice = createSlice({
           if (state.current?.id === action.payload.id) state.current = action.payload;
         }
       )
-      .addMatcher(isPending(...mutationThunks, deleteProperty, ...mediaThunks), (state) => {
+      .addMatcher(isPending(...mutationThunks, deleteProperty, bulkDeleteProperties, ...mediaThunks), (state) => {
         state.mutationStatus = "loading";
         state.mutationError = null;
       })
-      .addMatcher(isRejected(...mutationThunks, deleteProperty, ...mediaThunks), (state, action) => {
+      .addMatcher(isRejected(...mutationThunks, deleteProperty, bulkDeleteProperties, ...mediaThunks), (state, action) => {
         state.mutationStatus = "failed";
         state.mutationError = action.payload || "Something went wrong. Please try again.";
       })
       .addMatcher(
-        (action) => [...mutationThunks, deleteProperty, ...mediaThunks].some((t) => t.fulfilled.match(action)),
+        (action) => [...mutationThunks, deleteProperty, bulkDeleteProperties, ...mediaThunks].some((t) => t.fulfilled.match(action)),
         (state) => {
           state.mutationStatus = "succeeded";
         }

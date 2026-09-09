@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { LuPlus, LuEye, LuPencil, LuFileCheck2, LuFileX2 } from "react-icons/lu";
+import { LuPlus, LuEye, LuPencil, LuFileCheck2, LuFileX2, LuTrash2 } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
 import StatusBadge from "../../components/common/StatusBadge";
 import QuickFormModal from "../../components/common/QuickFormModal";
+import { ConfirmDialog } from "../../components/common/Modal";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
 import {
-  fetchDeals, createDeal, updateDeal, updateDealStage, closeDeal, clearDealsError,
+  fetchDeals, createDeal, updateDeal, updateDealStage, closeDeal, deleteDeal, bulkDeleteDeals, clearDealsError,
   STAGE_LABELS, STAGE_VALUES, STAGE_TRANSITIONS,
 } from "../../redux/slices/dealsSlice";
 import { fetchLeads } from "../../redux/slices/leadsSlice";
@@ -25,6 +26,8 @@ export default function DealsList() {
 
   const [editing, setEditing] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [toDelete, setToDelete] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
 
   useEffect(() => {
     dispatch(fetchDeals({ limit: 100 }));
@@ -78,7 +81,22 @@ export default function DealsList() {
     { label: "Edit deal", icon: LuPencil, onClick: () => { setEditing(row); setModalOpen(true); }, hidden: !permissions.edit },
     { label: "Mark as won", icon: LuFileCheck2, onClick: () => handleClose(row, "won"), hidden: !permissions.edit || ["Closed Won", "Closed Lost"].includes(row.stage) },
     { label: "Mark as lost", icon: LuFileX2, onClick: () => handleClose(row, "lost"), hidden: !permissions.edit || ["Closed Won", "Closed Lost"].includes(row.stage) },
+    { label: "Delete deal", icon: LuTrash2, tone: "danger", onClick: () => setToDelete(row), hidden: !permissions.delete },
   ];
+
+  const confirmDelete = async () => {
+    const res = await dispatch(deleteDeal(toDelete.id));
+    if (deleteDeal.fulfilled.match(res)) toast.push(`${toDelete.customerName || "Deal"} deleted.`, "success");
+    else toast.push(res.payload || "Failed to delete deal.", "error");
+    setToDelete(null);
+  };
+
+  const confirmBulkDelete = async () => {
+    const res = await dispatch(bulkDeleteDeals(bulkDeleteIds));
+    if (bulkDeleteDeals.fulfilled.match(res)) toast.push(`${res.payload.deletedCount} deal(s) deleted.`, "success");
+    else toast.push(res.payload || "Failed to delete deals.", "error");
+    setBulkDeleteIds(null);
+  };
 
   const handleSave = async (data) => {
     if (editing) {
@@ -150,6 +168,7 @@ export default function DealsList() {
         searchKeys={["customerName", "propertyTitle", "brokerName"]}
         filters={[{ key: "stage", label: "Stage", options: STAGES }]}
         getActions={getActions}
+        onBulkDelete={permissions.delete ? setBulkDeleteIds : undefined}
         renderCard={(r) => (
           <div>
             <p className="font-semibold text-ink-900">{r.customerName || "—"}</p>
@@ -176,6 +195,20 @@ export default function DealsList() {
         fields={editing ? editFields : createFields}
         initial={editing ? { dealValue: editing.dealValue ?? "", commissionAmount: editing.commissionAmount ?? "", commissionPercent: editing.commissionPercent ?? "" } : {}}
         submitLabel={editing ? "Save changes" : "Create deal"}
+      />
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete this deal?"
+        description={`${toDelete?.customerName || "This deal"} will be permanently removed from the pipeline.`}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteIds}
+        onClose={() => setBulkDeleteIds(null)}
+        onConfirm={confirmBulkDelete}
+        title={`Delete ${bulkDeleteIds?.length || 0} deals?`}
+        description="These deals will be permanently removed from the pipeline."
       />
     </div>
   );

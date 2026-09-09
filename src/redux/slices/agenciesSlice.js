@@ -63,7 +63,23 @@ export const deleteAgency = createAsyncThunk(
   }
 );
 
-const mutationThunks = [createAgency, updateAgency, deleteAgency];
+export const bulkDeleteAgencies = createAsyncThunk(
+  "agencies/bulkDeleteAgencies",
+  async (ids, { getState, rejectWithValue }) => {
+    try {
+      const res = await apiRequest("/tenants/bulk-delete", {
+        method: "POST",
+        body: { ids },
+        token: getState().auth.accessToken,
+      });
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+const mutationThunks = [createAgency, updateAgency, deleteAgency, bulkDeleteAgencies];
 
 const agenciesSlice = createSlice({
   name: "agencies",
@@ -102,6 +118,10 @@ const agenciesSlice = createSlice({
       })
       .addCase(deleteAgency.fulfilled, (state, action) => {
         state.list = state.list.filter((a) => a.id !== action.payload);
+      })
+      .addCase(bulkDeleteAgencies.fulfilled, (state, action) => {
+        const deleted = new Set(action.payload.deletedIds);
+        state.list = state.list.filter((a) => !deleted.has(a.id));
       })
       .addMatcher(isPending(...mutationThunks), (state) => {
         state.mutationStatus = "loading";

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { LuSearch, LuChevronLeft, LuChevronRight, LuSlidersHorizontal, LuDownload, LuLayoutGrid, LuList, LuArrowUpDown, LuTag, LuPencil, LuTrash2, LuEllipsis, LuX } from "react-icons/lu";
+import { LuSearch, LuChevronLeft, LuChevronRight, LuSlidersHorizontal, LuDownload, LuLayoutGrid, LuList, LuArrowUpDown, LuTrash2, LuX } from "react-icons/lu";
 import ActionMenu from "./ActionMenu";
 import EmptyState from "./EmptyState";
 import ListStatsStrip from "./ListStatsStrip";
@@ -24,6 +24,7 @@ export default function DataTable({
   renderCard,
   kanban,
   onKanbanDrop,
+  onBulkDelete,
 }) {
   const [query, setQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState({});
@@ -495,18 +496,15 @@ export default function DataTable({
                     <div className="mb-4 flex justify-center">
                       <div className="flex flex-wrap items-center gap-2 rounded-[18px] border border-[#E9EBF1] bg-white px-4 py-3 shadow-[0_18px_34px_-24px_rgba(17,20,43,0.25)]">
                         <span className="pr-2 text-sm font-semibold text-ink-500">{selectedIds.length} Selected</span>
-                        <button type="button" className="btn-outline btn-sm rounded-xl border-[#ECEEF4]">
-                          <LuTag className="h-4 w-4" /> Apply Code
-                        </button>
-                        <button type="button" className="btn-outline btn-sm rounded-xl border-[#ECEEF4]">
-                          <LuPencil className="h-4 w-4" /> Edit Info
-                        </button>
-                        <button type="button" className="btn-outline btn-sm rounded-xl border-[#ECEEF4]">
-                          <LuTrash2 className="h-4 w-4" /> Delete
-                        </button>
-                        <button type="button" className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ECEEF4] text-ink-500 hover:bg-surface-sunk">
-                          <LuEllipsis className="h-4 w-4" />
-                        </button>
+                        {onBulkDelete && (
+                          <button
+                            type="button"
+                            onClick={() => onBulkDelete(selectedIds)}
+                            className="btn-outline btn-sm rounded-xl border-coral-200 text-coral-600 hover:bg-coral-50"
+                          >
+                            <LuTrash2 className="h-4 w-4" /> Delete
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setSelectedIds([])}

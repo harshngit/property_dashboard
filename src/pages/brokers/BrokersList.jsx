@@ -10,7 +10,7 @@ import QuickFormModal from "../../components/common/QuickFormModal";
 import useAuth from "../../hooks/useAuth";
 import { useToast } from "../../components/common/ToastProvider";
 import { ROLES } from "../../config/roles";
-import { fetchUsers, updateUser, deleteUser, clearUsersError } from "../../redux/slices/usersSlice";
+import { fetchUsers, updateUser, deleteUser, bulkDeleteUsers, clearUsersError } from "../../redux/slices/usersSlice";
 import { activateUserAccount, registerUser, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
 import { fetchLeads } from "../../redux/slices/leadsSlice";
 
@@ -47,6 +47,7 @@ export default function BrokersList() {
   const { registeredUser, error: inviteError, status: inviteStatus } = useSelector((s) => s.auth);
 
   const [toDelete, setToDelete] = useState(null);
+  const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [editing, setEditing] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -155,6 +156,13 @@ export default function BrokersList() {
     setToDelete(null);
   };
 
+  const handleBulkDelete = async () => {
+    const res = await dispatch(bulkDeleteUsers(bulkDeleteIds));
+    if (bulkDeleteUsers.fulfilled.match(res)) toast.push(`${res.payload.deletedCount} broker(s) removed.`, "success");
+    else toast.push(res.payload || "Failed to remove brokers.", "error");
+    setBulkDeleteIds(null);
+  };
+
   const handleKanbanDrop = (row, newStatus) => handleStatus(row, newStatus);
 
   const brokerStats = [
@@ -180,6 +188,7 @@ export default function BrokersList() {
         searchKeys={["name", "email", "mobile", "tenantName"]}
         filters={[{ key: "status", label: "Status", options: STATUS_OPTIONS }]}
         getActions={getActions}
+        onBulkDelete={permissions.delete ? setBulkDeleteIds : undefined}
         renderCard={(r) => (
           <div>
             <div className="flex items-center gap-3">
@@ -230,6 +239,13 @@ export default function BrokersList() {
         onConfirm={handleDelete}
         title="Remove this broker?"
         description={`${toDelete?.name}'s assigned leads will need to be reassigned.`}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteIds}
+        onClose={() => setBulkDeleteIds(null)}
+        onConfirm={handleBulkDelete}
+        title={`Remove ${bulkDeleteIds?.length || 0} brokers?`}
+        description="Their assigned leads will need to be reassigned."
       />
     </div>
   );
