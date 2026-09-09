@@ -288,16 +288,6 @@ const projectsSlice = createSlice({
         const units = state.unitsByProject[action.payload.projectId] || [];
         state.unitsByProject[action.payload.projectId] = [action.payload, ...units];
       })
-      .addMatcher(
-        (action) => [updateUnit, updateUnitStatus].some((t) => t.fulfilled.match(action)),
-        (state, action) => {
-          const unit = action.payload;
-          const units = state.unitsByProject[unit.projectId];
-          if (units) {
-            state.unitsByProject[unit.projectId] = units.map((u) => (u.id === unit.id ? unit : u));
-          }
-        }
-      )
       .addCase(deleteUnit.fulfilled, (state, action) => {
         Object.keys(state.unitsByProject).forEach((projectId) => {
           state.unitsByProject[projectId] = state.unitsByProject[projectId].filter((u) => u.id !== action.payload);
@@ -309,6 +299,16 @@ const projectsSlice = createSlice({
           state.unitsByProject[projectId] = state.unitsByProject[projectId].filter((u) => !deleted.has(u.id));
         });
       })
+      .addMatcher(
+        (action) => [updateUnit, updateUnitStatus].some((t) => t.fulfilled.match(action)),
+        (state, action) => {
+          const unit = action.payload;
+          const units = state.unitsByProject[unit.projectId];
+          if (units) {
+            state.unitsByProject[unit.projectId] = units.map((u) => (u.id === unit.id ? unit : u));
+          }
+        }
+      )
       .addMatcher(isPending(...mutationThunks), (state) => {
         state.mutationStatus = "loading";
         state.mutationError = null;
