@@ -48,8 +48,8 @@ export default function UnitsModal({ project, open, onClose, canManage }) {
     const res = await dispatch(createUnit({
       projectId: project.id,
       unitNumber: data.unitNumber,
-      floor: data.floor !== "" ? Number(data.floor) : undefined,
-      size: data.size !== "" ? Number(data.size) : undefined,
+      floor: data.floor !== "" && data.floor != null ? Number(data.floor) : undefined,
+      size: data.size !== "" && data.size != null ? Number(data.size) : undefined,
       price: Number(data.price),
     }));
     if (createUnit.fulfilled.match(res)) toast.push(`Unit ${data.unitNumber} added.`, "success");

@@ -1,6 +1,14 @@
 import { createSlice, createAsyncThunk, isPending, isRejected } from "@reduxjs/toolkit";
 import { apiRequest } from "../../api/client";
 
+const normalizeMedia = (m) => ({
+  id: m.id,
+  url: m.url,
+  mediaType: m.media_type || m.mediaType,
+  displayOrder: m.display_order ?? m.displayOrder,
+  isPrimary: m.is_primary ?? m.isPrimary,
+});
+
 const normalizeProject = (p) =>
   p
     ? {
@@ -12,6 +20,12 @@ const normalizeProject = (p) =>
         city: p.city,
         locality: p.locality,
         address: p.address,
+        amenities: p.amenities || [],
+        // Each entry: { bhk, area, price } - a repeatable unit-type table
+        // shown on the project's listing, distinct from the actual per-unit
+        // inventory tracked in the units/ endpoints.
+        configurations: p.configurations || [],
+        media: (p.media || []).map(normalizeMedia),
         status: p.status,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
@@ -68,11 +82,11 @@ export const fetchProjectById = createAsyncThunk(
 
 export const createProject = createAsyncThunk(
   "projects/createProject",
-  async ({ name, description, city, locality, address, builderId }, { getState, rejectWithValue }) => {
+  async ({ name, description, city, locality, address, builderId, amenities, configurations }, { getState, rejectWithValue }) => {
     try {
       const res = await apiRequest("/projects", {
         method: "POST",
-        body: { name, description, city, locality, address, builderId: builderId || undefined },
+        body: { name, description, city, locality, address, builderId: builderId || undefined, amenities, configurations },
         token: getState().auth.accessToken,
       });
       return normalizeProject(res.data);
@@ -120,6 +134,51 @@ export const bulkDeleteProjects = createAsyncThunk(
         token: getState().auth.accessToken,
       });
       return res.data;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+// Media has its own endpoint - a project must already exist before photos
+// can be attached, so this is only usable once the project is created.
+export const uploadProjectMedia = createAsyncThunk(
+  "projects/uploadProjectMedia",
+  async ({ id, file }, { getState, rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await apiRequest(`/projects/${id}/media/upload`, {
+        method: "POST",
+        body: formData,
+        isFormData: true,
+        token: getState().auth.accessToken,
+      });
+      return { projectId: id, media: normalizeMedia(res.data) };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const deleteProjectMedia = createAsyncThunk(
+  "projects/deleteProjectMedia",
+  async ({ id, mediaId }, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/projects/${id}/media/${mediaId}`, { method: "DELETE", token: getState().auth.accessToken });
+      return { projectId: id, mediaId };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const setPrimaryProjectMedia = createAsyncThunk(
+  "projects/setPrimaryProjectMedia",
+  async ({ id, mediaId }, { getState, rejectWithValue }) => {
+    try {
+      await apiRequest(`/projects/${id}/media/${mediaId}/primary`, { method: "PUT", token: getState().auth.accessToken });
+      return { projectId: id, mediaId };
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -221,6 +280,9 @@ const mutationThunks = [
   updateProject,
   deleteProject,
   bulkDeleteProjects,
+  uploadProjectMedia,
+  deleteProjectMedia,
+  setPrimaryProjectMedia,
   createUnit,
   updateUnit,
   updateUnitStatus,
@@ -280,6 +342,21 @@ const projectsSlice = createSlice({
       .addCase(bulkDeleteProjects.fulfilled, (state, action) => {
         const deleted = new Set(action.payload.deletedIds);
         state.list = state.list.filter((p) => !deleted.has(p.id));
+      })
+      .addCase(uploadProjectMedia.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.projectId) {
+          state.current.media = [...state.current.media, action.payload.media];
+        }
+      })
+      .addCase(deleteProjectMedia.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.projectId) {
+          state.current.media = state.current.media.filter((m) => m.id !== action.payload.mediaId);
+        }
+      })
+      .addCase(setPrimaryProjectMedia.fulfilled, (state, action) => {
+        if (state.current?.id === action.payload.projectId) {
+          state.current.media = state.current.media.map((m) => ({ ...m, isPrimary: m.id === action.payload.mediaId }));
+        }
       })
       .addCase(fetchUnitsByProject.fulfilled, (state, action) => {
         state.unitsByProject[action.payload.projectId] = action.payload.units;
