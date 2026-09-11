@@ -5,20 +5,39 @@ import { InlineSpinner } from "./PageLoader";
 import { LuSave } from "react-icons/lu";
 
 /**
- * fields: [{ key, label, type: 'text'|'select', options?, placeholder? }]
+ * fields: [{ key, label, type: 'text'|'select', options?, placeholder?, required? }]
  */
 export default function QuickFormModal({ open, onClose, onSubmit, title, description, fields, initial, submitLabel = "Save" }) {
   const [form, setForm] = useState(initial || {});
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
-    if (open) setForm(initial || {});
+    if (open) {
+      setForm(initial || {});
+      setFieldErrors({});
+    }
   }, [open, initial]);
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = (key) => (e) => {
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+    setFieldErrors((errs) => (errs[key] ? { ...errs, [key]: undefined } : errs));
+  };
+
+  const validate = () => {
+    const errs = {};
+    fields.forEach((f) => {
+      if (f.required && !String(form[f.key] ?? "").trim()) {
+        errs[f.key] = `${f.label.replace(/\s*\(optional\)/i, "")} is required.`;
+      }
+    });
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
@@ -32,9 +51,9 @@ export default function QuickFormModal({ open, onClose, onSubmit, title, descrip
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {fields.map((f) =>
             f.type === "select" ? (
-              <SelectField key={f.key} label={f.label} options={f.options} value={form[f.key] ?? ""} onChange={set(f.key)} className={f.full ? "sm:col-span-2" : ""} />
+              <SelectField key={f.key} label={f.label} options={f.options} value={form[f.key] ?? ""} onChange={set(f.key)} error={fieldErrors[f.key]} className={f.full ? "sm:col-span-2" : ""} />
             ) : (
-              <TextField key={f.key} type={f.type || "text"} label={f.label} placeholder={f.placeholder} value={form[f.key] ?? ""} onChange={set(f.key)} className={f.full ? "sm:col-span-2" : ""} />
+              <TextField key={f.key} type={f.type || "text"} label={f.label} placeholder={f.placeholder} value={form[f.key] ?? ""} onChange={set(f.key)} error={fieldErrors[f.key]} className={f.full ? "sm:col-span-2" : ""} />
             )
           )}
         </div>

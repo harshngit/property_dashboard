@@ -23,7 +23,7 @@ const STATUS_CLASS = {
 };
 
 const FIELDS = [
-  { key: "fullName", label: "Builder / Developer", placeholder: "e.g. Desai Developers" },
+  { key: "fullName", label: "Builder / Developer", placeholder: "e.g. Desai Developers", required: true },
   { key: "email", label: "Email", placeholder: "name@propertyserch.com" },
   { key: "mobile", label: "Mobile", placeholder: "9876543210" },
   { key: "status", label: "Status", type: "select", options: STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_LABEL[s] })) },
@@ -33,10 +33,10 @@ const FIELDS = [
 ];
 
 const INVITE_FIELDS = [
-  { key: "fullName", label: "Builder / Developer", placeholder: "e.g. Desai Developers" },
+  { key: "fullName", label: "Builder / Developer", placeholder: "e.g. Desai Developers", required: true },
   { key: "email", label: "Email", placeholder: "name@propertyserch.com" },
   { key: "mobile", label: "Mobile", placeholder: "9876543210" },
-  { key: "password", label: "Temporary password", type: "password", placeholder: "••••••••" },
+  { key: "password", label: "Temporary password", type: "password", placeholder: "••••••••", required: true },
 ];
 
 export default function BuildersList() {
