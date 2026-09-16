@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -6,6 +7,7 @@ import {
   LuBedDouble, LuBath, LuChevronLeft, LuChevronRight, LuPhone, LuNavigation, LuClock3, LuTrendingUp,
   LuShieldCheck, LuLayoutGrid, LuStamp, LuStar, LuBriefcase, LuSofa, LuCar, LuLock, LuChevronDown, LuCalendarCheck,
   LuDumbbell, LuWaves, LuSquareParking, LuBaby, LuWifi, LuZap, LuTrees, LuArrowUpDown, LuCctv, LuCheck,
+  LuX, LuMaximize2,
 } from "react-icons/lu";
 import { usePageTitle } from "../../context/PageTitleContext";
 import StatusBadge from "../../components/common/StatusBadge";
@@ -71,6 +73,79 @@ const AMENITY_ICONS = [
 ];
 const amenityIcon = (label) => AMENITY_ICONS.find(([re]) => re.test(label))?.[1] || LuCheck;
 
+function Lightbox({ media, index, onIndexChange, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onIndexChange((i) => (i === 0 ? media.length - 1 : i - 1));
+      if (e.key === "ArrowRight") onIndexChange((i) => (i === media.length - 1 ? 0 : i + 1));
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [media.length, onIndexChange, onClose]);
+
+  const current = media[index];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex flex-col bg-ink-950/95">
+      <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+        <span className="text-sm font-semibold text-white/80">{index + 1} / {media.length}</span>
+        <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20">
+          <LuX className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-4">
+        {current?.url ? (
+          <img src={current.url} alt="" className="max-h-full max-w-full rounded-xl object-contain" />
+        ) : (
+          <div className="text-sm text-white/60">Preview unavailable</div>
+        )}
+
+        {media.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => onIndexChange((i) => (i === 0 ? media.length - 1 : i - 1))}
+              className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-6"
+            >
+              <LuChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onIndexChange((i) => (i === media.length - 1 ? 0 : i + 1))}
+              className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-6"
+            >
+              <LuChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {media.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto px-4 pb-4 sm:px-6">
+          {media.map((m, i) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => onIndexChange(i)}
+              className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition-opacity ${i === index ? "border-white" : "border-transparent opacity-50 hover:opacity-80"}`}
+            >
+              {m.url ? <img src={m.url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-white/10" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+}
+
 function AccordionItem({ question, answer }) {
   const [open, setOpen] = useState(false);
   return (
@@ -103,6 +178,7 @@ export default function PropertyDetail() {
   const [priceOpen, setPriceOpen] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [imageFailed, setImageFailed] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => {
@@ -211,18 +287,36 @@ export default function PropertyDetail() {
 
       <div className="card mb-5 overflow-hidden p-1.5">
         <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-[1.6fr_1fr]">
-          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] lg:aspect-auto">
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] lg:aspect-auto lg:h-[min(80vh,34rem)]">
             {sortedMedia[activeImage]?.url && !imageFailed ? (
-              <img
-                src={sortedMedia[activeImage].url}
-                alt={property.title}
-                className="h-full w-full object-cover"
-                onError={() => setImageFailed(true)}
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="h-full w-full cursor-zoom-in"
+                aria-label="View full-size photo"
+              >
+                <img
+                  src={sortedMedia[activeImage].url}
+                  alt={property.title}
+                  className="h-full w-full object-cover"
+                  onError={() => setImageFailed(true)}
+                />
+              </button>
             ) : (
               <div className="flex h-full items-center justify-center text-white">
                 <LuBuilding className="h-12 w-12 opacity-80" />
               </div>
+            )}
+
+            {sortedMedia[activeImage]?.url && !imageFailed && (
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                title="View full-size photo"
+                className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-ink-700 shadow-card hover:bg-white"
+              >
+                <LuMaximize2 className="h-4 w-4" />
+              </button>
             )}
 
             {(property.badge || property.verified) && (
@@ -268,22 +362,27 @@ export default function PropertyDetail() {
             const remaining = otherMedia.length - visibleThumbs.length;
             if (!visibleThumbs.length) return null;
             return (
-              <div className="grid grid-cols-2 grid-rows-2 gap-1.5">
+              <div className="grid aspect-[4/3] grid-cols-2 grid-rows-2 gap-1.5 lg:aspect-auto lg:h-[min(80vh,34rem)]">
                 {visibleThumbs.map((m, i) => {
                   const isLast = i === visibleThumbs.length - 1 && remaining > 0;
                   return (
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => setActiveImage(m.index)}
-                      className={`relative overflow-hidden rounded-xl bg-surface-sunk ${i === 0 ? "col-span-2 row-span-1" : "row-span-1"}`}
+                      onClick={() => {
+                        setActiveImage(m.index);
+                        if (isLast) setLightboxOpen(true);
+                      }}
+                      className={`group relative overflow-hidden rounded-xl bg-surface-sunk ${i === 0 ? "col-span-2 row-span-1" : "row-span-1"}`}
                     >
-                      {m.url ? <img src={m.url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full" />}
-                      {isLast && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-ink-950/60 text-white">
+                      {m.url ? <img src={m.url} alt="" className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" /> : <div className="h-full w-full" />}
+                      {isLast ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-ink-950/60 text-white transition-colors group-hover:bg-ink-950/70">
                           <LuLayoutGrid className="h-4 w-4" />
                           <span className="text-xs font-bold">+{remaining} More</span>
                         </div>
+                      ) : (
+                        <div className="absolute inset-0 bg-ink-950/0 transition-colors group-hover:bg-ink-950/10" />
                       )}
                     </button>
                   );
@@ -482,6 +581,15 @@ export default function PropertyDetail() {
         initial={{ price: property.price }}
         submitLabel="Update price"
       />
+
+      {lightboxOpen && sortedMedia.length > 0 && (
+        <Lightbox
+          media={sortedMedia}
+          index={activeImage}
+          onIndexChange={setActiveImage}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 }
