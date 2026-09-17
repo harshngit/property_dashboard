@@ -39,7 +39,7 @@ const STATUS_LABELS = {
   rejected: "Rejected", inactive: "Inactive",
 };
 
-const formatPrice = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+const LISTING_CATEGORIES = ["residential", "institutional", "special_situation", "auction"];
 const typeLabel = (t) => t?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function PropertiesList() {
@@ -54,6 +54,7 @@ export default function PropertiesList() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [txnFilter, setTxnFilter] = useState("All");
   const [badgeFilter, setBadgeFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [toDelete, setToDelete] = useState(null);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [priceTarget, setPriceTarget] = useState(null);
@@ -93,9 +94,10 @@ export default function PropertiesList() {
       const matchesStatus = statusFilter === "All" || row.status === statusFilter;
       const matchesTxn = txnFilter === "All" || row.transactionType === txnFilter;
       const matchesBadge = badgeFilter === "All" || (badgeFilter === "VERIFIED" ? row.verified : row.badge === badgeFilter);
-      return matchesQuery && matchesType && matchesStatus && matchesTxn && matchesBadge;
+      const matchesCategory = categoryFilter === "All" || row.listingCategory === categoryFilter;
+      return matchesQuery && matchesType && matchesStatus && matchesTxn && matchesBadge && matchesCategory;
     });
-  }, [rows, query, typeFilter, statusFilter, txnFilter, badgeFilter]);
+  }, [rows, query, typeFilter, statusFilter, txnFilter, badgeFilter, categoryFilter]);
 
   const propertyStats = [
     { label: "Total Listings", value: rows.length, meta: "all properties" },
@@ -143,7 +145,7 @@ export default function PropertiesList() {
   };
 
   const handlePriceSave = async (data) => {
-    const res = await dispatch(updatePropertyPrice({ id: priceTarget.id, price: Number(data.price) }));
+    const res = await dispatch(updatePropertyPrice({ id: priceTarget.id, price: data.price }));
     if (updatePropertyPrice.fulfilled.match(res)) {
       toast.push(`${priceTarget.title}'s price updated.`, "success");
     } else {
@@ -210,6 +212,16 @@ export default function PropertiesList() {
               value={badgeFilter}
               onChange={setBadgeFilter}
               options={["All", "FEATURED", "VERIFIED", "NEW LISTING"]}
+            />
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm shadow-card">
+            <LuBuilding2 className="h-4 w-4 text-ink-500/70" />
+            <Select
+              variant="ghost"
+              className="min-w-[9rem]"
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              options={["All", ...LISTING_CATEGORIES.map((c) => ({ value: c, label: typeLabel(c) }))]}
             />
           </div>
         </div>
@@ -325,7 +337,7 @@ export default function PropertiesList() {
                 <div className="mt-auto flex items-end justify-between gap-3 border-t border-line pt-3">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">Price</p>
-                    <p className="mt-1 text-[16px] font-extrabold leading-tight text-ink-950">{formatPrice(row.price)}</p>
+                    <p className="mt-1 text-[16px] font-extrabold leading-tight text-ink-950">{row.price || "—"}</p>
                   </div>
                   <button
                     type="button"
@@ -364,7 +376,7 @@ export default function PropertiesList() {
         onSubmit={handlePriceSave}
         title="Update price"
         description={priceTarget ? `Set a new price for ${priceTarget.title}.` : ""}
-        fields={[{ key: "price", label: "Price", type: "number", full: true }]}
+        fields={[{ key: "price", label: "Price", full: true }]}
         initial={{ price: priceTarget?.price }}
         submitLabel="Update price"
       />

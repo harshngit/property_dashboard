@@ -26,6 +26,10 @@ const STATUS_LABELS = {
   draft: "Draft", pending_approval: "Pending Approval", approved: "Approved",
   rejected: "Rejected", inactive: "Inactive",
 };
+const CATEGORY_LABELS = {
+  residential: "Residential", institutional: "Institutional",
+  special_situation: "Special Situation", auction: "Auction",
+};
 const typeLabel = (t) => t?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const formatPrice = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
@@ -228,7 +232,7 @@ export default function PropertyDetail() {
   };
 
   const handlePriceSave = async (data) => {
-    const res = await dispatch(updatePropertyPrice({ id: property.id, price: Number(data.price) }));
+    const res = await dispatch(updatePropertyPrice({ id: property.id, price: data.price }));
     if (updatePropertyPrice.fulfilled.match(res)) toast.push("Price updated.", "success");
     else toast.push(res.payload || "Failed to update price.", "error");
     setPriceOpen(false);
@@ -264,7 +268,7 @@ export default function PropertyDetail() {
         </div>
       </div>
 
-      <p className="mb-1 text-sm font-semibold text-green-600">{formatPrice(property.price)}</p>
+      <p className="mb-1 text-sm font-semibold text-green-600">{property.price}</p>
       <div className="mb-2 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm font-semibold text-ink-700">
         <Fact icon={LuBedDouble} value={property.bedrooms} label="Beds" />
         <Fact icon={LuBath} value={property.bathrooms} label="Baths" />
@@ -424,8 +428,8 @@ export default function PropertyDetail() {
       <div className="card mb-5 p-6">
         <h3 className="mb-4 font-display text-base font-bold text-ink-950">Listing snapshot</h3>
         <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
-          <StatInline icon={LuIndianRupee} label="Price" value={formatPrice(property.price)} />
-          <StatInline icon={LuTrendingUp} label="Price / sqft" value={property.areaSqft ? formatPrice(Math.round(property.price / property.areaSqft)) : "—"} />
+          <StatInline icon={LuIndianRupee} label="Price" value={property.price || "—"} />
+          <StatInline icon={LuTrendingUp} label="Rate" value={property.rate != null ? `${formatPrice(property.rate)} / sqft` : "—"} />
           <StatInline icon={LuLayers} label="Super built-up" value={property.areaSqft ? `${property.areaSqft} sqft` : "—"} />
           {property.carpetAreaSqft != null && <StatInline icon={LuLayers} label="Carpet area" value={`${property.carpetAreaSqft} sqft`} />}
           <StatInline icon={LuBedDouble} label="Bedrooms" value={property.bedrooms ?? "—"} />
@@ -445,6 +449,45 @@ export default function PropertyDetail() {
             {property.parkingSpots != null && <StatInline icon={LuCar} label="Parking" value={`${property.parkingSpots} ${property.parkingType || ""}`.trim()} />}
             {property.ageOfProperty && <StatInline icon={LuClock3} label="Age" value={property.ageOfProperty} />}
             {property.gatedCommunity && <StatInline icon={LuLock} label="Gated community" value="Yes" />}
+          </div>
+        </div>
+      )}
+
+      {(property.annualAppreciationPercent != null || property.estimatedRentMonthly != null || property.localityRating != null) && (
+        <div className="card mb-5 p-6">
+          <h3 className="mb-4 font-display text-base font-bold text-ink-950">Market trends</h3>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+            {property.annualAppreciationPercent != null && (
+              <StatInline icon={LuTrendingUp} label="Annual appreciation" value={`${property.annualAppreciationPercent > 0 ? "+" : ""}${property.annualAppreciationPercent}%`} />
+            )}
+            {property.estimatedRentMonthly != null && (
+              <StatInline icon={LuIndianRupee} label="Estimated rent" value={`${formatPrice(property.estimatedRentMonthly)} / mo`} />
+            )}
+            {property.localityRating != null && (
+              <StatInline icon={LuStar} label="Locality rating" value={`${property.localityRating} / 5`} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {property.listingCategory && property.listingCategory !== "residential" && (
+        <div className="card mb-5 p-6">
+          <h3 className="mb-4 font-display text-base font-bold text-ink-950">{CATEGORY_LABELS[property.listingCategory] || property.listingCategory} details</h3>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
+            {property.listingCategory === "auction" && (
+              <>
+                {property.auctionDate && (
+                  <StatInline icon={LuCalendarCheck} label="Auction date" value={new Date(property.auctionDate).toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })} />
+                )}
+                {property.sourceBank && <StatInline icon={LuBriefcase} label="Source bank" value={property.sourceBank} />}
+              </>
+            )}
+            {property.listingCategory === "institutional" && property.occupancyPercent != null && (
+              <StatInline icon={LuBuilding} label="Occupancy" value={`${property.occupancyPercent}%`} />
+            )}
+            {property.listingCategory === "special_situation" && property.yieldPercent != null && (
+              <StatInline icon={LuTrendingUp} label="Yield" value={`${property.yieldPercent}%${property.yieldQualifier ? ` ${property.yieldQualifier}` : ""}`} />
+            )}
           </div>
         </div>
       )}
@@ -577,7 +620,7 @@ export default function PropertyDetail() {
         onSubmit={handlePriceSave}
         title="Update price"
         description={`Set a new price for ${property.title}.`}
-        fields={[{ key: "price", label: "Price", type: "number", full: true }]}
+        fields={[{ key: "price", label: "Price", full: true }]}
         initial={{ price: property.price }}
         submitLabel="Update price"
       />

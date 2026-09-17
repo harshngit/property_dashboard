@@ -301,7 +301,7 @@ export default function LeadDetail() {
                   <p className="text-sm font-semibold text-ink-900">{lead.propertyTitle}</p>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-sm text-ink-700">
-                  <LuWallet className="h-4 w-4 text-ink-400" /> {formatMoney(lead.propertyPrice) || "Price not set"}
+                  <LuWallet className="h-4 w-4 text-ink-400" /> {lead.propertyPrice || "Price not set"}
                 </div>
                 <button onClick={() => navigate(`/app/properties/${lead.propertyId}`)} className="btn-outline btn-sm mt-4 w-full justify-center">
                   <LuMapPin className="h-3.5 w-3.5" /> View listing

@@ -58,6 +58,12 @@ const PARKING_TYPE_OPTIONS = [
   { value: "Covered", label: "Covered" },
   { value: "Open", label: "Open" },
 ];
+const LISTING_CATEGORY_OPTIONS = [
+  { value: "residential", label: "Residential" },
+  { value: "institutional", label: "Institutional" },
+  { value: "special_situation", label: "Special Situation" },
+  { value: "auction", label: "Auction" },
+];
 
 const emptyProperty = {
   title: "", description: "", aboutExtended: "", propertyType: "apartment", transactionType: "sell", price: "",
@@ -65,6 +71,18 @@ const emptyProperty = {
   bedrooms: "", bathrooms: "", amenities: "", tags: "", badge: "", verified: false, reraNumber: "",
   possessionStatus: "", floorNumber: "", totalFloors: "", furnishing: "", parkingSpots: "", parkingType: "",
   ageOfProperty: "", gatedCommunity: false,
+  rate: "", listingCategory: "residential", annualAppreciationPercent: "", estimatedRentMonthly: "",
+  localityRating: "", auctionDate: "", sourceBank: "", occupancyPercent: "", yieldPercent: "", yieldQualifier: "",
+};
+
+// Converts an ISO timestamp to the value a `datetime-local` input expects
+// (`YYYY-MM-DDTHH:mm`, local time, no seconds/timezone).
+const toDatetimeLocal = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 // `property` (edit mode only) is the normalized property from propertiesSlice.
@@ -108,6 +126,16 @@ export default function PropertyForm({ mode = "create", property }) {
           parkingType: property.parkingType || "",
           ageOfProperty: property.ageOfProperty || "",
           gatedCommunity: property.gatedCommunity || false,
+          rate: property.rate ?? "",
+          listingCategory: property.listingCategory || "residential",
+          annualAppreciationPercent: property.annualAppreciationPercent ?? "",
+          estimatedRentMonthly: property.estimatedRentMonthly ?? "",
+          localityRating: property.localityRating ?? "",
+          auctionDate: toDatetimeLocal(property.auctionDate),
+          sourceBank: property.sourceBank || "",
+          occupancyPercent: property.occupancyPercent ?? "",
+          yieldPercent: property.yieldPercent ?? "",
+          yieldQualifier: property.yieldQualifier || "",
         }
       : emptyProperty
   );
@@ -214,10 +242,20 @@ export default function PropertyForm({ mode = "create", property }) {
       ageOfProperty: form.ageOfProperty || undefined,
       gatedCommunity: form.gatedCommunity,
       faqs: cleanFaqs,
+      rate: form.rate !== "" ? Number(form.rate) : undefined,
+      listingCategory: form.listingCategory || undefined,
+      annualAppreciationPercent: form.annualAppreciationPercent !== "" ? Number(form.annualAppreciationPercent) : undefined,
+      estimatedRentMonthly: form.estimatedRentMonthly !== "" ? Number(form.estimatedRentMonthly) : undefined,
+      localityRating: form.localityRating !== "" ? Number(form.localityRating) : undefined,
+      auctionDate: form.auctionDate ? new Date(form.auctionDate).toISOString() : undefined,
+      sourceBank: form.sourceBank || undefined,
+      occupancyPercent: form.occupancyPercent !== "" ? Number(form.occupancyPercent) : undefined,
+      yieldPercent: form.yieldPercent !== "" ? Number(form.yieldPercent) : undefined,
+      yieldQualifier: form.yieldQualifier || undefined,
     };
 
     const res = mode === "create"
-      ? await dispatch(createProperty({ ...payload, price: Number(form.price) }))
+      ? await dispatch(createProperty({ ...payload, price: form.price }))
       : await dispatch(updateProperty({ id: property.id, ...payload }));
 
     setSaving(false);
@@ -259,9 +297,9 @@ export default function PropertyForm({ mode = "create", property }) {
             <TextField label="Locality" placeholder="e.g. Whitefield" value={form.locality} onChange={set("locality")} />
             <TextField label="Address (optional)" placeholder="Full address" value={form.address} onChange={set("address")} className="sm:col-span-2" />
             {mode === "create" ? (
-              <TextField label="Price" type="number" placeholder="e.g. 12000000" value={form.price} onChange={set("price")} error={errors.price} />
+              <TextField label="Price" placeholder={'e.g. "2.1 Cr", "Price on Request", "45,00,000"'} value={form.price} onChange={set("price")} error={errors.price} />
             ) : (
-              <TextField label="Price" value={`₹${Number(property?.price || 0).toLocaleString("en-IN")}`} disabled className="opacity-70" />
+              <TextField label="Price" value={property?.price || ""} disabled className="opacity-70" />
             )}
             <TextField label="Super built-up area (sqft)" type="number" placeholder="e.g. 1450" value={form.areaSqft} onChange={set("areaSqft")} />
             <TextField label="Carpet area (sqft)" type="number" placeholder="e.g. 1180" value={form.carpetAreaSqft} onChange={set("carpetAreaSqft")} />
@@ -303,6 +341,38 @@ export default function PropertyForm({ mode = "create", property }) {
             <input type="checkbox" checked={form.gatedCommunity} onChange={setChecked("gatedCommunity")} className="h-4 w-4 rounded border-line text-red-500 focus:ring-red-500" />
             Gated community
           </label>
+        </div>
+
+        <div>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Rate &amp; market trends</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <TextField label="Rate (₹ per sqft)" type="number" placeholder="e.g. 22400" value={form.rate} onChange={set("rate")} />
+            <TextField label="Annual appreciation (%)" type="number" step="0.1" placeholder="e.g. 8.4" value={form.annualAppreciationPercent} onChange={set("annualAppreciationPercent")} />
+            <TextField label="Estimated rent (₹/month)" type="number" placeholder="e.g. 120000" value={form.estimatedRentMonthly} onChange={set("estimatedRentMonthly")} />
+            <TextField label="Locality rating (0–5)" type="number" step="0.1" min="0" max="5" placeholder="e.g. 4.5" value={form.localityRating} onChange={set("localityRating")} />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Listing category</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SelectField label="Category" value={form.listingCategory} onChange={set("listingCategory")} options={LISTING_CATEGORY_OPTIONS} />
+            {form.listingCategory === "auction" && (
+              <>
+                <TextField label="Auction date &amp; time" type="datetime-local" value={form.auctionDate} onChange={set("auctionDate")} />
+                <TextField label="Source bank" placeholder="e.g. State Bank of India" value={form.sourceBank} onChange={set("sourceBank")} />
+              </>
+            )}
+            {form.listingCategory === "institutional" && (
+              <TextField label="Occupancy (%)" type="number" step="0.1" min="0" max="100" placeholder="e.g. 98" value={form.occupancyPercent} onChange={set("occupancyPercent")} />
+            )}
+            {form.listingCategory === "special_situation" && (
+              <>
+                <TextField label="Yield (%)" type="number" step="0.1" placeholder="e.g. 11.4" value={form.yieldPercent} onChange={set("yieldPercent")} />
+                <TextField label="Yield qualifier" placeholder="e.g. Post Capex" value={form.yieldQualifier} onChange={set("yieldQualifier")} />
+              </>
+            )}
+          </div>
         </div>
 
         <div>

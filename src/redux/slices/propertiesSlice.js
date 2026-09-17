@@ -34,7 +34,19 @@ const normalizeProperty = (p) =>
         aboutExtended: p.about_extended || p.aboutExtended,
         propertyType: p.property_type,
         transactionType: p.transaction_type,
+        // Free text (e.g. "2.1 Cr", "Price on Request"), not a number -
+        // `rate` below is the numeric, sortable ₹/sqft field.
         price: p.price,
+        rate: p.rate,
+        listingCategory: p.listing_category,
+        annualAppreciationPercent: p.annual_appreciation_percent,
+        estimatedRentMonthly: p.estimated_rent_monthly,
+        localityRating: p.locality_rating,
+        auctionDate: p.auction_date,
+        sourceBank: p.source_bank,
+        occupancyPercent: p.occupancy_percent,
+        yieldPercent: p.yield_percent,
+        yieldQualifier: p.yield_qualifier,
         city: p.city,
         locality: p.locality,
         address: p.address,
@@ -109,6 +121,8 @@ const PROPERTY_FIELDS = [
   "address", "latitude", "longitude", "areaSqft", "carpetAreaSqft", "facing", "bedrooms", "bathrooms",
   "amenities", "tags", "badge", "verified", "reraNumber", "possessionStatus", "floorNumber",
   "totalFloors", "furnishing", "parkingSpots", "parkingType", "ageOfProperty", "gatedCommunity", "faqs",
+  "rate", "listingCategory", "annualAppreciationPercent", "estimatedRentMonthly", "localityRating",
+  "auctionDate", "sourceBank", "occupancyPercent", "yieldPercent", "yieldQualifier",
 ];
 
 export const createProperty = createAsyncThunk(
