@@ -47,6 +47,11 @@ export const MODULES = {
   TASKS: "tasks",
   SETTINGS: "settings",
   USERS: "users",
+  OPPORTUNITIES: "opportunities",
+  INVESTORS: "investors",
+  BUSINESS_LEADS: "business_leads",
+  CONTENT: "content",
+  ADMIN_PANEL: "admin_panel",
 };
 
 // Which modules each role can access, and which actions they get in list pages
@@ -61,6 +66,8 @@ export const ROLE_ACCESS = {
       MODULES.BROKERS, MODULES.AGENCIES, MODULES.BUILDERS, MODULES.PROJECTS, MODULES.DEALS,
       MODULES.DOCUMENTS, MODULES.PAYMENTS, MODULES.WHATSAPP, MODULES.AI,
       MODULES.REPORTS, MODULES.TASKS, MODULES.USERS,
+      MODULES.OPPORTUNITIES, MODULES.INVESTORS, MODULES.BUSINESS_LEADS,
+      MODULES.CONTENT, MODULES.ADMIN_PANEL,
     ],
     actions: { create: true, edit: true, delete: true, approve: true, export: true },
   },
@@ -68,7 +75,7 @@ export const ROLE_ACCESS = {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.PROPERTIES, MODULES.CUSTOMERS,
       MODULES.BROKERS, MODULES.DEALS, MODULES.DOCUMENTS, MODULES.TASKS, MODULES.REPORTS,
-      MODULES.USERS,
+      MODULES.USERS, MODULES.BUSINESS_LEADS,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: true },
   },
@@ -87,6 +94,7 @@ export const ROLE_ACCESS = {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.CUSTOMERS, MODULES.PROPERTIES,
       MODULES.DEALS, MODULES.TASKS, MODULES.DOCUMENTS,
+      MODULES.OPPORTUNITIES, MODULES.INVESTORS, MODULES.BUSINESS_LEADS,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: false },
   },

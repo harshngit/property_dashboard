@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Menu, Transition } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  LuMenu, LuBell, LuChevronDown, LuLogOut, LuUserCog, LuSettings, LuX,
+  LuMenu, LuChevronDown, LuLogOut, LuUserCog, LuSettings, LuX,
 } from "react-icons/lu";
 import { NAV_ITEMS } from "../config/navigation";
 import { ROLE_LABELS, canAccessModule } from "../config/roles";
@@ -14,6 +14,7 @@ import useRouteLoading from "../hooks/useRouteLoading";
 import Avatar from "../components/common/Avatar";
 import PageLoader from "../components/common/PageLoader";
 import GlobalSearch from "../components/common/GlobalSearch";
+import NotificationBell from "../components/common/NotificationBell";
 import { PageTitleProvider, usePageTitle } from "../context/PageTitleContext";
 
 function BrandMark({ collapsed }) {
@@ -208,10 +209,7 @@ function DashboardShell() {
               <button onClick={() => navigate("/app/settings")} className="rounded-lg p-2 text-ink-700 hover:bg-surface-sunk" title="Settings">
                 <LuSettings className="h-5 w-5" />
               </button>
-              <button className="relative rounded-lg p-2 text-ink-700 hover:bg-surface-sunk" title="Notifications">
-                <LuBell className="h-5 w-5" />
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-coral-500 ring-2 ring-white" />
-              </button>
+              <NotificationBell />
             </div>
           </div>
         </header>

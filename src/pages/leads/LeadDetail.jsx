@@ -17,6 +17,8 @@ import {
   fetchLeadById, fetchLeadTimeline, assignLead, updateLeadStatus, addLeadNote, clearCurrentLead,
 } from "../../redux/slices/leadsSlice";
 import { fetchUsers } from "../../redux/slices/usersSlice";
+import useAuth from "../../hooks/useAuth";
+import LeadInsightPanels from "./LeadInsightPanels";
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "hot", "warm", "cold", "won", "lost"];
 
@@ -90,6 +92,7 @@ export default function LeadDetail() {
   const { current: lead, timeline, status, timelineStatus } = useSelector((s) => s.leads);
   const { list: users } = useSelector((s) => s.users);
   const { setTitle } = usePageTitle();
+  const { role } = useAuth();
 
   const [assignOpen, setAssignOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -311,6 +314,8 @@ export default function LeadDetail() {
               <p className="mt-3 text-xs text-ink-500">No property linked yet.</p>
             )}
           </div>
+
+          <LeadInsightPanels lead={lead} role={role} />
         </div>
       </div>
 

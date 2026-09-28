@@ -21,6 +21,7 @@ import {
   fetchPropertyById, clearCurrentProperty, approveProperty, rejectProperty, updatePropertyPrice,
 } from "../../redux/slices/propertiesSlice";
 import { fetchLeads } from "../../redux/slices/leadsSlice";
+import PropertyEnquiriesCard from "./PropertyEnquiriesCard";
 
 const STATUS_LABELS = {
   draft: "Draft", pending_approval: "Pending Approval", approved: "Approved",
@@ -602,6 +603,8 @@ export default function PropertyDetail() {
           </div>
         </div>
       )}
+
+      <PropertyEnquiriesCard propertyId={id} />
 
       <QuickFormModal
         open={rejectOpen}

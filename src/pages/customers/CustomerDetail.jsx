@@ -17,6 +17,7 @@ import {
   clearCurrentCustomer, clearCustomerProfile,
 } from "../../redux/slices/customersSlice";
 import { fetchLeads } from "../../redux/slices/leadsSlice";
+import CustomerPortalPanels from "./CustomerPortalPanels";
 
 const EDIT_FIELDS = [
   { key: "fullName", label: "Full name", placeholder: "e.g. Karan Mehta" },
@@ -269,6 +270,8 @@ export default function CustomerDetail() {
               <p className="mt-3 text-xs text-ink-500">No documents uploaded yet.</p>
             )}
           </div>
+
+          <CustomerPortalPanels customerId={id} />
         </div>
       </div>
 

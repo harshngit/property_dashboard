@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { LuPlus, LuEye, LuPencil, LuFileCheck2, LuFileX2, LuTrash2 } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
@@ -19,6 +20,7 @@ const formatValue = (value) => (value == null || value === "" ? "—" : `₹${Nu
 
 export default function DealsList() {
   const toast = useToast();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { permissions } = useAuth();
   const { list: rows, status } = useSelector((s) => s.deals);
@@ -77,7 +79,7 @@ export default function DealsList() {
   ];
 
   const getActions = (row) => [
-    { label: "View deal", icon: LuEye, onClick: () => toast.push(`${row.customerName || "This deal"} is at "${row.stage}".`, "info") },
+    { label: "View deal", icon: LuEye, onClick: () => navigate(`/app/deals/${row.id}`) },
     { label: "Edit deal", icon: LuPencil, onClick: () => { setEditing(row); setModalOpen(true); }, hidden: !permissions.edit },
     { label: "Mark as won", icon: LuFileCheck2, onClick: () => handleClose(row, "won"), hidden: !permissions.edit || ["Closed Won", "Closed Lost"].includes(row.stage) },
     { label: "Mark as lost", icon: LuFileX2, onClick: () => handleClose(row, "lost"), hidden: !permissions.edit || ["Closed Won", "Closed Lost"].includes(row.stage) },

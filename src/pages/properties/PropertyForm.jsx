@@ -20,11 +20,47 @@ const PROPERTY_TYPES = [
   { value: "farmhouse", label: "Farmhouse" },
   { value: "other", label: "Other" },
 ];
+// A listing is always for sale or for rent/lease - it shows under the
+// website's Buy or Rent menu respectively.
 const TRANSACTION_TYPES = [
-  { value: "sell", label: "Sale" },
-  { value: "rent", label: "Rent" },
-  { value: "buy", label: "Buy" },
+  { value: "sell", label: "For Sale" },
+  { value: "rent", label: "For Rent / Lease" },
 ];
+const OPPORTUNITY_SOURCE_OPTIONS = [
+  { value: "", label: "Not specified" },
+  { value: "sarfaesi_bank_auction", label: "SARFAESI bank auction" },
+  { value: "nbfc_repossession", label: "NBFC repossession" },
+  { value: "arc_asset", label: "ARC asset sale" },
+  { value: "drt_auction", label: "DRT auction" },
+  { value: "nclt_liquidation", label: "NCLT / liquidation" },
+  { value: "housing_board", label: "Housing board" },
+  { value: "legal_notice", label: "Public / legal notice" },
+  { value: "broker_sourced", label: "Broker sourced" },
+  { value: "direct_seller", label: "Direct seller" },
+  { value: "internal_crm", label: "Internal CRM lead" },
+  { value: "other", label: "Other" },
+];
+const DEAL_POSSESSION_OPTIONS = [
+  { value: "", label: "Not specified" },
+  { value: "physical", label: "Physical" },
+  { value: "symbolic", label: "Symbolic" },
+  { value: "vacant", label: "Vacant" },
+  { value: "occupied", label: "Occupied" },
+  { value: "unknown", label: "Unknown" },
+];
+const SITUATION_TAGS = [
+  { value: "urgent_sale", label: "Urgent sale" },
+  { value: "financial_distress", label: "Financial restructuring" },
+  { value: "investor_exit", label: "Investor exit" },
+  { value: "time_bound_sale", label: "Time-bound sale" },
+];
+const RISK_INDICATORS = [
+  { value: "documentation_pending", label: "Documentation pending" },
+  { value: "possession_unclear", label: "Possession unclear" },
+  { value: "legal_complexity", label: "Legal complexity" },
+  { value: "tenant_occupied", label: "Tenant occupied" },
+];
+const DEAL_CATEGORIES = ["auction", "special_situation"];
 const BADGE_OPTIONS = [
   { value: "", label: "None" },
   { value: "FEATURED", label: "Featured" },
@@ -73,6 +109,9 @@ const emptyProperty = {
   ageOfProperty: "", gatedCommunity: false,
   rate: "", listingCategory: "residential", annualAppreciationPercent: "", estimatedRentMonthly: "",
   localityRating: "", auctionDate: "", sourceBank: "", occupancyPercent: "", yieldPercent: "", yieldQualifier: "",
+  opportunitySourceType: "", reservePrice: "", emdAmount: "", emdDeadline: "", inspectionDate: "",
+  auctionReferenceId: "", auctionPortalUrl: "", possessionType: "", legalStatusNote: "", estimatedMarketValue: "",
+  situationTags: [], riskIndicators: [],
 };
 
 // Converts an ISO timestamp to the value a `datetime-local` input expects
@@ -136,6 +175,18 @@ export default function PropertyForm({ mode = "create", property }) {
           occupancyPercent: property.occupancyPercent ?? "",
           yieldPercent: property.yieldPercent ?? "",
           yieldQualifier: property.yieldQualifier || "",
+          opportunitySourceType: property.opportunitySourceType || "",
+          reservePrice: property.reservePrice ?? "",
+          emdAmount: property.emdAmount ?? "",
+          emdDeadline: toDatetimeLocal(property.emdDeadline),
+          inspectionDate: toDatetimeLocal(property.inspectionDate),
+          auctionReferenceId: property.auctionReferenceId || "",
+          auctionPortalUrl: property.auctionPortalUrl || "",
+          possessionType: property.possessionType || "",
+          legalStatusNote: property.legalStatusNote || "",
+          estimatedMarketValue: property.estimatedMarketValue ?? "",
+          situationTags: property.situationTags || [],
+          riskIndicators: property.riskIndicators || [],
         }
       : emptyProperty
   );
@@ -149,6 +200,12 @@ export default function PropertyForm({ mode = "create", property }) {
   const fileInputRef = useRef(null);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  // Checkbox groups stored as arrays (situation tags, risk indicators).
+  const toggleList = (key, value) => () =>
+    setForm((f) => ({
+      ...f,
+      [key]: f[key].includes(value) ? f[key].filter((v) => v !== value) : [...f[key], value],
+    }));
   const setChecked = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.checked }));
 
   const addFaq = () => setFaqs((f) => [...f, { question: "", answer: "" }]);
@@ -252,6 +309,22 @@ export default function PropertyForm({ mode = "create", property }) {
       occupancyPercent: form.occupancyPercent !== "" ? Number(form.occupancyPercent) : undefined,
       yieldPercent: form.yieldPercent !== "" ? Number(form.yieldPercent) : undefined,
       yieldQualifier: form.yieldQualifier || undefined,
+      ...(DEAL_CATEGORIES.includes(form.listingCategory)
+        ? {
+            opportunitySourceType: form.opportunitySourceType || undefined,
+            reservePrice: form.reservePrice !== "" ? Number(form.reservePrice) : undefined,
+            emdAmount: form.emdAmount !== "" ? Number(form.emdAmount) : undefined,
+            emdDeadline: form.emdDeadline ? new Date(form.emdDeadline).toISOString() : undefined,
+            inspectionDate: form.inspectionDate ? new Date(form.inspectionDate).toISOString() : undefined,
+            auctionReferenceId: form.auctionReferenceId || undefined,
+            auctionPortalUrl: form.auctionPortalUrl || undefined,
+            possessionType: form.possessionType || undefined,
+            legalStatusNote: form.legalStatusNote || undefined,
+            estimatedMarketValue: form.estimatedMarketValue !== "" ? Number(form.estimatedMarketValue) : undefined,
+            situationTags: form.situationTags,
+            riskIndicators: form.riskIndicators,
+          }
+        : {}),
     };
 
     const res = mode === "create"
@@ -263,7 +336,12 @@ export default function PropertyForm({ mode = "create", property }) {
     const success = mode === "create" ? createProperty.fulfilled.match(res) : updateProperty.fulfilled.match(res);
     if (success) {
       if (mode === "create") {
-        toast.push("Property submitted for approval — now add some photos.", "success");
+        toast.push(
+          res.payload.status === "approved"
+            ? "Property verified and published — now add some photos."
+            : "Property submitted for approval — now add some photos.",
+          "success"
+        );
         navigate(`/app/properties/${res.payload.id}/edit`);
       } else {
         toast.push("Property updated successfully.", "success");
@@ -373,6 +451,61 @@ export default function PropertyForm({ mode = "create", property }) {
               </>
             )}
           </div>
+
+          {DEAL_CATEGORIES.includes(form.listingCategory) && (
+            <div className="mt-5 rounded-2xl border border-line bg-surface-muted/40 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-ink-500">
+                Deal details - the investment score, discount and liquidity are calculated automatically on save
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <SelectField label="Deal source" value={form.opportunitySourceType} onChange={set("opportunitySourceType")} options={OPPORTUNITY_SOURCE_OPTIONS} />
+                <TextField label="Reserve / asking price (₹)" type="number" min="0" placeholder="e.g. 12000000" value={form.reservePrice} onChange={set("reservePrice")} />
+                <TextField label="Estimated market value (₹)" type="number" min="0" placeholder="e.g. 16000000" value={form.estimatedMarketValue} onChange={set("estimatedMarketValue")} />
+                <SelectField label="Possession" value={form.possessionType} onChange={set("possessionType")} options={DEAL_POSSESSION_OPTIONS} />
+                <TextField label="Inspection date" type="datetime-local" value={form.inspectionDate} onChange={set("inspectionDate")} />
+                {form.listingCategory === "auction" && (
+                  <>
+                    <TextField label="EMD amount (₹)" type="number" min="0" value={form.emdAmount} onChange={set("emdAmount")} />
+                    <TextField label="EMD deadline" type="datetime-local" value={form.emdDeadline} onChange={set("emdDeadline")} />
+                    <TextField label="Auction reference / ID" value={form.auctionReferenceId} onChange={set("auctionReferenceId")} />
+                    <TextField label="Auction portal link" type="url" placeholder="https://" value={form.auctionPortalUrl} onChange={set("auctionPortalUrl")} />
+                  </>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {form.listingCategory === "special_situation" && (
+                  <div>
+                    <p className="field-label">Situation</p>
+                    <div className="flex flex-wrap gap-3">
+                      {SITUATION_TAGS.map((t) => (
+                        <label key={t.value} className="flex items-center gap-2 text-sm text-ink-700">
+                          <input type="checkbox" checked={form.situationTags.includes(t.value)} onChange={toggleList("situationTags", t.value)} /> {t.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <p className="field-label">Risk indicators</p>
+                  <div className="flex flex-wrap gap-3">
+                    {RISK_INDICATORS.map((t) => (
+                      <label key={t.value} className="flex items-center gap-2 text-sm text-ink-700">
+                        <input type="checkbox" checked={form.riskIndicators.includes(t.value)} onChange={toggleList("riskIndicators", t.value)} /> {t.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <TextareaField className="mt-4" label="Legal status note (indicative)" rows={2} value={form.legalStatusNote} onChange={set("legalStatusNote")} />
+              {mode !== "create" && property?.investmentScore != null && (
+                <p className="mt-3 text-xs text-ink-500">
+                  Current score: <span className="font-semibold text-ink-900">{property.investmentScore}/100</span>
+                  {property.discountPercent != null && ` • ${Number(property.discountPercent)}% below market`}
+                  {property.liquidityBand && ` • ${property.liquidityBand} liquidity`}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div>

@@ -29,6 +29,9 @@ import ProjectCreate from "./pages/projects/ProjectCreate";
 import ProjectEdit from "./pages/projects/ProjectEdit";
 import ProjectDetail from "./pages/projects/ProjectDetail";
 import DealsList from "./pages/deals/DealsList";
+import DealDetail from "./pages/deals/DealDetail";
+import ContentPage from "./pages/content/ContentPage";
+import AdminPage from "./pages/admin/AdminPage";
 import TasksPage from "./pages/tasks/TasksPage";
 import DocumentsPage from "./pages/documents/DocumentsPage";
 import PaymentsPage from "./pages/payments/PaymentsPage";
@@ -37,6 +40,9 @@ import AIPage from "./pages/ai/AIPage";
 import ReportsPage from "./pages/reports/ReportsPage";
 import UsersPage from "./pages/users/UsersPage";
 import SettingsPage from "./pages/settings/SettingsPage";
+import OpportunitiesPage from "./pages/opportunities/OpportunitiesPage";
+import InvestorsPage from "./pages/investors/InvestorsPage";
+import BusinessLeadsPage from "./pages/business-leads/BusinessLeadsPage";
 import { MODULES } from "./config/roles";
 
 function RootRedirect() {
@@ -97,6 +103,7 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.DEALS} />}>
             <Route path="deals" element={<DealsList />} />
+            <Route path="deals/:id" element={<DealDetail />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.TASKS} />}>
@@ -123,8 +130,28 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
           </Route>
 
+          <Route element={<ModuleGuard moduleKey={MODULES.OPPORTUNITIES} />}>
+            <Route path="opportunities" element={<OpportunitiesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.INVESTORS} />}>
+            <Route path="investors" element={<InvestorsPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.BUSINESS_LEADS} />}>
+            <Route path="business-leads" element={<BusinessLeadsPage />} />
+          </Route>
+
           <Route element={<ModuleGuard moduleKey={MODULES.USERS} />}>
             <Route path="users" element={<UsersPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.CONTENT} />}>
+            <Route path="content" element={<ContentPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.ADMIN_PANEL} />}>
+            <Route path="admin" element={<AdminPage />} />
           </Route>
 
           <Route path="settings" element={<SettingsPage />} />

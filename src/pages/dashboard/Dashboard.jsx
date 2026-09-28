@@ -22,6 +22,7 @@ import {
   LuPackageSearch,
 } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
+import TasksDueWidget from "./TasksDueWidget";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import {
@@ -184,6 +185,8 @@ export default function Dashboard() {
           <StatCard key={item.label} icon={item.icon} label={item.label} value={item.value} tone={item.tone} onClick={() => navigate(item.to)} />
         ))}
       </div>
+
+      <TasksDueWidget />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.9fr_1.8fr]">
         <Panel title="Lead Status" icon={LuInfo}>

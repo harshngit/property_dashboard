@@ -47,6 +47,22 @@ const normalizeProperty = (p) =>
         occupancyPercent: p.occupancy_percent,
         yieldPercent: p.yield_percent,
         yieldQualifier: p.yield_qualifier,
+        opportunitySourceType: p.opportunity_source_type,
+        reservePrice: p.reserve_price,
+        emdAmount: p.emd_amount,
+        emdDeadline: p.emd_deadline,
+        inspectionDate: p.inspection_date,
+        auctionReferenceId: p.auction_reference_id,
+        auctionPortalUrl: p.auction_portal_url,
+        possessionType: p.possession_type,
+        legalStatusNote: p.legal_status_note,
+        estimatedMarketValue: p.estimated_market_value,
+        situationTags: p.situation_tags || [],
+        riskIndicators: p.risk_indicators || [],
+        discountPercent: p.discount_percent,
+        investmentScore: p.investment_score,
+        liquidityBand: p.liquidity_band,
+        priceValue: p.price_value,
         city: p.city,
         locality: p.locality,
         address: p.address,
@@ -123,6 +139,10 @@ const PROPERTY_FIELDS = [
   "totalFloors", "furnishing", "parkingSpots", "parkingType", "ageOfProperty", "gatedCommunity", "faqs",
   "rate", "listingCategory", "annualAppreciationPercent", "estimatedRentMonthly", "localityRating",
   "auctionDate", "sourceBank", "occupancyPercent", "yieldPercent", "yieldQualifier",
+  // Bank auction / special situation deal fields (scores are computed server-side)
+  "opportunitySourceType", "reservePrice", "emdAmount", "emdDeadline", "inspectionDate",
+  "auctionReferenceId", "auctionPortalUrl", "possessionType", "legalStatusNote",
+  "estimatedMarketValue", "situationTags", "riskIndicators",
 ];
 
 export const createProperty = createAsyncThunk(

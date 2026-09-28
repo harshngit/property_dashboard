@@ -85,7 +85,15 @@ export async function apiRequest(path, { method = "GET", body, token, isFormData
   }
 
   if (!res.ok || payload?.success === false) {
-    throw new Error(payload?.message || `Request failed with status ${res.status}`);
+    // 422s carry per-field reasons in `errors` (express-validator's `msg`, or
+    // the content guard's `suggestion`) - surface the first one alongside
+    // the generic message so users see what to fix.
+    const first = payload?.errors?.[0];
+    const detail = first?.msg || first?.message || (first?.rule ? `${first.field}: "${first.match}" - ${first.suggestion}` : null);
+    const err = new Error(detail ? `${payload?.message || "Request failed"}: ${detail}` : payload?.message || `Request failed with status ${res.status}`);
+    err.status = res.status;
+    err.details = payload?.errors || null;
+    throw err;
   }
 
   return payload;
