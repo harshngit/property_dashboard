@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { LuEye, LuShieldCheck, LuUserCheck, LuRefreshCw, LuMessageSquarePlus } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
@@ -31,6 +32,109 @@ function ticket(p) {
   return `${formatINR(p.ticket_size_min)} - ${formatINR(p.ticket_size_max)}`;
 }
 
+const TIER_LABELS = { new: "New", engaged: "Engaged", repeat: "Repeat investor", vip: "VIP" };
+
+// Module 38 IRM: relationship tier, stated vs engaged ticket size, deal
+// history and the AI's best-matched live deals for this investor.
+function IrmPanel({ profileId }) {
+  const { data: irm, loading, error } = useApiQuery(profileId ? `/investors/${profileId}/irm` : null);
+  if (loading) return <InlineSpinner />;
+  if (error) return <p className="text-xs text-red-600">{error}</p>;
+  if (!irm) return null;
+  const t = irm.ticket || {};
+  const stage = (s) => titleCase(s === "deal_interest" ? "interest" : s);
+  return (
+    <div className="space-y-4 rounded-xl border border-line p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-xs font-bold uppercase tracking-wide text-ink-500">Relationship</h4>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${irm.repeatInvestor ? "bg-emerald-50 text-emerald-700" : "bg-surface-muted text-ink-700"}`}>
+          {TIER_LABELS[irm.tier] || irm.tier}
+        </span>
+      </div>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+        <div><dt className="text-ink-500">Stated ticket</dt><dd className="font-semibold text-ink-900">{t.statedMin == null && t.statedMax == null ? "—" : `${formatINR(t.statedMin) || "any"} - ${formatINR(t.statedMax) || "any"}`}</dd></div>
+        <div><dt className="text-ink-500">Engaged ticket (typical)</dt><dd className="font-semibold text-ink-900">{t.engagedMedian != null ? `${formatINR(t.engagedP25)} - ${formatINR(t.engagedP75)}` : "—"}</dd></div>
+        <div><dt className="text-ink-500">Closed deals</dt><dd className="font-semibold text-ink-900">{irm.deals?.closures || 0}{irm.deals?.closures ? ` · ${t.closedTotalDisplay}` : ""}</dd></div>
+        <div><dt className="text-ink-500">Active / dropped</dt><dd className="font-semibold text-ink-900">{irm.deals?.active || 0} / {irm.deals?.dropped || 0}</dd></div>
+        <div><dt className="text-ink-500">Engagement (180d)</dt><dd className="font-semibold text-ink-900">{irm.engagement?.positive180d || 0} actions · {irm.engagement?.dismissed180d || 0} dismissed</dd></div>
+        <div><dt className="text-ink-500">Deal rooms / alerts</dt><dd className="font-semibold text-ink-900">{irm.dealRooms?.approved || 0} approved · {irm.alerts?.sent || 0} alerts sent</dd></div>
+      </dl>
+      {irm.deals?.interests?.length > 0 && (
+        <div>
+          <p className="mb-1 text-xs font-semibold text-ink-700">Deal history</p>
+          <ul className="divide-y divide-line rounded-lg border border-line text-xs">
+            {irm.deals.interests.slice(0, 8).map((i) => (
+              <li key={i.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                <span className="min-w-0 truncate text-ink-900">{i.title} <span className="text-ink-500">· {i.city} · {formatINR(i.ticket)}</span></span>
+                <StatusBadge value={stage(i.stage)} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div>
+        <p className="mb-1 text-xs font-semibold text-ink-700">AI-matched live deals</p>
+        {(irm.aiMatches || []).length === 0 ? (
+          <p className="text-xs text-ink-500">No live deals match yet.</p>
+        ) : (
+          <ul className="divide-y divide-line rounded-lg border border-line text-xs">
+            {irm.aiMatches.map((m) => (
+              <li key={m.deal.id} className="px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Link to={`/app/deal-room/${m.deal.id}`} className="min-w-0 truncate font-semibold text-ink-900 hover:underline">{m.deal.title}</Link>
+                  <span className="shrink-0 font-bold text-red-600">{m.score}%</span>
+                </div>
+                <p className="text-ink-500">{titleCase(m.deal.listing_category)} · {m.deal.city}{m.reasons?.length ? ` · ${m.reasons.join(" · ")}` : ""}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Segments() {
+  const { data, loading, error } = useApiQuery("/investors/irm/segments");
+  if (loading) return <InlineSpinner />;
+  if (error) return <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>;
+  if (!data) return null;
+  const block = (title, obj, fmt = titleCase) => (
+    <div className="rounded-xl border border-line bg-white p-4">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">{title}</p>
+      {Object.keys(obj || {}).length === 0 ? (
+        <p className="text-xs text-ink-500">—</p>
+      ) : (
+        <ul className="space-y-1.5 text-sm">
+          {Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, v]) => (
+            <li key={k} className="flex items-center justify-between gap-3">
+              <span className="text-ink-700">{fmt(k)}</span>
+              <span className="font-semibold text-ink-900">{v}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        {[["Investors", data.total], ["Verified", data.verified], ["NRI", data.nri], ["HNI", data.hni], ["Institutional interest", data.institutional]].map(([l, v]) => (
+          <div key={l} className="rounded-xl border border-line bg-white p-4">
+            <p className="text-xs text-ink-500">{l}</p>
+            <p className="mt-1 text-xl font-bold text-ink-950">{v}</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        {block("By relationship tier", data.byTier, (k) => TIER_LABELS[k] || k)}
+        {block("By asset class", data.byAssetClass)}
+        {block("By investor category", data.byCategory)}
+      </div>
+    </div>
+  );
+}
+
 function InvestorDetail({ profile }) {
   const { data: behaviour, loading } = useApiQuery(profile ? `/investors/${profile.id}/behaviour?days=90` : null);
   // NRI portfolio (properties under management, rent, repatriation) and the
@@ -41,6 +145,7 @@ function InvestorDetail({ profile }) {
   if (!profile) return null;
   return (
     <div className="space-y-5 text-sm">
+      <IrmPanel profileId={profile.id} />
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
         {[
           ["Type", typeLabel(profile)],
@@ -51,6 +156,8 @@ function InvestorDetail({ profile }) {
           ["Ticket size", ticket(profile)],
           ["Preferred cities", (profile.preferred_cities || []).join(", ")],
           ["Interested in", (profile.asset_class_preferences || []).map(titleCase).join(", ")],
+          ["Needs help with", (profile.property_interest_types || []).map(titleCase).join(", ")],
+          ["Time zone", profile.time_zone],
           ["Risk appetite", titleCase(profile.risk_appetite)],
           ["Manager", profile.manager_name || "Unassigned"],
           ["Email", profile.email],
@@ -279,6 +386,7 @@ export default function InvestorsPage() {
   const isAdmin = ADMIN_ROLES.includes(role);
   const [tab, setTab] = useState("investors");
   const { data, loading, error, reload } = useApiQuery("/investors?limit=100");
+  const { data: segments } = useApiQuery("/investors/irm/segments");
   const managers = useStaffOptions();
   const [viewing, setViewing] = useState(null);
   const [verifying, setVerifying] = useState(null);
@@ -297,9 +405,10 @@ export default function InvestorsPage() {
         manager: p.manager_name || "Unassigned",
         verification: titleCase(p.verification_status),
         joined: formatDate(p.created_at),
+        tier: TIER_LABELS[(segments?.tiers || []).find((t) => t.profileId === p.id)?.tier] || "—",
         raw: p,
       })),
-    [data]
+    [data, segments]
   );
 
   const verify = async () => {
@@ -339,6 +448,7 @@ export default function InvestorsPage() {
       <div className="mb-4 flex gap-1 rounded-lg bg-surface-muted p-1 sm:w-fit">
         {[
           ["investors", "Investors"],
+          ["segments", "Segments"],
           ["requests", "NRI service requests"],
         ].map(([key, label]) => (
           <button
@@ -355,6 +465,8 @@ export default function InvestorsPage() {
 
       {tab === "requests" ? (
         <ServiceRequests />
+      ) : tab === "segments" ? (
+        <Segments />
       ) : (
         <DataTable
           columns={[
@@ -363,6 +475,7 @@ export default function InvestorsPage() {
             { key: "country", label: "Country" },
             { key: "ticket", label: "Ticket size" },
             { key: "manager", label: "Manager" },
+            { key: "tier", label: "Tier" },
             { key: "verification", label: "Verification", render: (r) => <StatusBadge value={r.verification} /> },
             { key: "joined", label: "Joined" },
           ]}
@@ -373,6 +486,7 @@ export default function InvestorsPage() {
           filters={[
             { key: "verification", label: "Verification", options: ["Pending", "Verified", "Rejected"] },
             { key: "type", label: "Type", options: ["NRI", "HNI", "NRI + HNI"] },
+            { key: "tier", label: "Tier", options: Object.values(TIER_LABELS) },
           ]}
           getActions={(row) => [
             { label: "View profile", icon: LuEye, onClick: () => setViewing(row.raw) },
@@ -407,7 +521,7 @@ export default function InvestorsPage() {
         />
       )}
 
-      <Modal open={!!viewing} onClose={() => setViewing(null)} title={viewing?.full_name} description="Investor profile" maxWidth="max-w-xl">
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title={viewing?.full_name} description="Investor profile" maxWidth="max-w-2xl">
         <InvestorDetail profile={viewing} />
       </Modal>
 

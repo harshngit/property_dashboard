@@ -106,7 +106,7 @@ const emptyProperty = {
   city: "", locality: "", address: "", latitude: "", longitude: "", areaSqft: "", carpetAreaSqft: "", facing: "",
   bedrooms: "", bathrooms: "", amenities: "", tags: "", badge: "", verified: false, reraNumber: "",
   possessionStatus: "", floorNumber: "", totalFloors: "", furnishing: "", parkingSpots: "", parkingType: "",
-  ageOfProperty: "", gatedCommunity: false,
+  ageOfProperty: "", gatedCommunity: false, mandateType: "standard", minAcceptablePrice: "",
   rate: "", listingCategory: "residential", annualAppreciationPercent: "", estimatedRentMonthly: "",
   localityRating: "", auctionDate: "", sourceBank: "", occupancyPercent: "", yieldPercent: "", yieldQualifier: "",
   opportunitySourceType: "", reservePrice: "", emdAmount: "", emdDeadline: "", inspectionDate: "",
@@ -165,6 +165,8 @@ export default function PropertyForm({ mode = "create", property }) {
           parkingType: property.parkingType || "",
           ageOfProperty: property.ageOfProperty || "",
           gatedCommunity: property.gatedCommunity || false,
+          mandateType: property.mandateType || "standard",
+          minAcceptablePrice: property.minAcceptablePrice ?? "",
           rate: property.rate ?? "",
           listingCategory: property.listingCategory || "residential",
           annualAppreciationPercent: property.annualAppreciationPercent ?? "",
@@ -298,6 +300,8 @@ export default function PropertyForm({ mode = "create", property }) {
       parkingType: form.parkingType || undefined,
       ageOfProperty: form.ageOfProperty || undefined,
       gatedCommunity: form.gatedCommunity,
+      mandateType: form.mandateType || "standard",
+      minAcceptablePrice: form.minAcceptablePrice !== "" ? Number(form.minAcceptablePrice) : null,
       faqs: cleanFaqs,
       rate: form.rate !== "" ? Number(form.rate) : undefined,
       listingCategory: form.listingCategory || undefined,
@@ -402,6 +406,28 @@ export default function PropertyForm({ mode = "create", property }) {
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">RERA</h3>
           <TextField label="RERA number (optional)" placeholder="e.g. P51800003521" value={form.reraNumber} onChange={set("reraNumber")} />
+        </div>
+
+        <div>
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Mandate & matching</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Mandate"
+              value={form.mandateType}
+              onChange={set("mandateType")}
+              options={[
+                { value: "standard", label: "Standard" },
+                { value: "exclusive", label: "Exclusive Mandate (+20 matching boost)" },
+              ]}
+            />
+            <TextField
+              label="Seller's minimum acceptable price (₹) - private"
+              type="number"
+              placeholder="Only A R staff see Price-Compatible matches"
+              value={form.minAcceptablePrice}
+              onChange={set("minAcceptablePrice")}
+            />
+          </div>
         </div>
 
         <div>

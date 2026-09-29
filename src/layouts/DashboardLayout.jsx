@@ -38,8 +38,9 @@ function SidebarContent({ role, collapsed }) {
     <nav className="no-scrollbar mt-6 flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4">
       {NAV_ITEMS.filter((item) => canAccessModule(role, item.key)).map((item) => (
         <NavLink
-          key={item.key}
+          key={item.to}
           to={item.to}
+          end={item.end}
           className={({ isActive }) => (isActive ? "sidebar-link-active" : "sidebar-link")}
           title={collapsed ? item.label : undefined}
         >
@@ -160,7 +161,8 @@ function DashboardShell() {
             </div>
 
             <div className="flex items-center gap-3">
-              <GlobalSearch role={role} />
+              {/* Staff search - investors (customers) only have their workspace. */}
+              {role !== "customer" && <GlobalSearch role={role} />}
 
               <Menu as="div" className="relative">
                 <Menu.Button className="flex items-center gap-2.5 rounded-xl p-1 pr-2 hover:bg-surface-sunk">

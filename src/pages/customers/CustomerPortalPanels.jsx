@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { LuFileText, LuGlobe, LuRefreshCw, LuMessageCircle } from "react-icons/lu";
 import StatusBadge from "../../components/common/StatusBadge";
+import MatchBadge from "../../components/common/MatchBadge";
 import { useToast } from "../../components/common/ToastProvider";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate, formatINR, titleCase } from "../../lib/format";
@@ -128,7 +129,10 @@ export default function CustomerPortalPanels({ customerId }) {
             {matchList.map((m) => (
               <li key={m.id} className="py-2">
                 <Link to={`/app/properties/${m.property_id}`} className="block truncate text-sm font-semibold text-ink-900 hover:text-red-600">{m.property?.title}</Link>
-                <p className="text-xs text-ink-500">{Math.round(Number(m.relevance_score))}% · {m.property?.city}{m.property?.price_value ? ` · ${formatINR(m.property.price_value)}` : ""}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <MatchBadge score={Number(m.relevance_score)} tier={m.tier || m.matched_reasons?.tier} breakdown={m.matched_reasons?.breakdown} />
+                  <span className="text-xs text-ink-500">{m.property?.city}{m.property?.price_value ? ` · ${formatINR(m.property.price_value)}` : ""}</span>
+                </div>
               </li>
             ))}
           </ul>

@@ -22,6 +22,9 @@ import {
 } from "../../redux/slices/propertiesSlice";
 import { fetchLeads } from "../../redux/slices/leadsSlice";
 import PropertyEnquiriesCard from "./PropertyEnquiriesCard";
+import MatchedBuyersCard from "./MatchedBuyersCard";
+import ListingChecksCard from "../../components/fraud/ListingChecksCard";
+import DueDiligenceCard from "../../components/dd/DueDiligenceCard";
 
 const STATUS_LABELS = {
   draft: "Draft", pending_approval: "Pending Approval", approved: "Approved",
@@ -605,6 +608,12 @@ export default function PropertyDetail() {
       )}
 
       <PropertyEnquiriesCard propertyId={id} />
+
+      <ListingChecksCard propertyId={id} />
+
+      <DueDiligenceCard propertyId={id} />
+
+      {property.listingCategory === "residential" && <MatchedBuyersCard propertyId={id} status={property.status} />}
 
       <QuickFormModal
         open={rejectOpen}

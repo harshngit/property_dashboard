@@ -30,6 +30,7 @@ import ProjectEdit from "./pages/projects/ProjectEdit";
 import ProjectDetail from "./pages/projects/ProjectDetail";
 import DealsList from "./pages/deals/DealsList";
 import DealDetail from "./pages/deals/DealDetail";
+import DealRoomPage from "./pages/deal-room/DealRoomPage";
 import ContentPage from "./pages/content/ContentPage";
 import AdminPage from "./pages/admin/AdminPage";
 import TasksPage from "./pages/tasks/TasksPage";
@@ -43,11 +44,27 @@ import SettingsPage from "./pages/settings/SettingsPage";
 import OpportunitiesPage from "./pages/opportunities/OpportunitiesPage";
 import InvestorsPage from "./pages/investors/InvestorsPage";
 import BusinessLeadsPage from "./pages/business-leads/BusinessLeadsPage";
+import WorkspacePage from "./pages/workspace/WorkspacePage";
+import MatchingPage from "./pages/matching/MatchingPage";
+import TrustPage from "./pages/trust/TrustPage";
+import FraudPage from "./pages/fraud/FraudPage";
+import DisputesPage from "./pages/disputes/DisputesPage";
+import InvoicesPage from "./pages/invoices/InvoicesPage";
+import IntelligencePage from "./pages/intelligence/IntelligencePage";
+import ReputationPage from "./pages/reputation/ReputationPage";
 import { MODULES } from "./config/roles";
 
+// Customers (investors) land in their workspace, everyone else on the dashboard.
+const homeFor = (role) => (role === "customer" ? "/app/workspace" : "/app/dashboard");
+
 function RootRedirect() {
-  const { isAuthenticated } = useAuth();
-  return <Navigate to={isAuthenticated ? "/app/dashboard" : "/login"} replace />;
+  const { isAuthenticated, role } = useAuth();
+  return <Navigate to={isAuthenticated ? homeFor(role) : "/login"} replace />;
+}
+
+function AppHome() {
+  const { role } = useAuth();
+  return <Navigate to={homeFor(role)} replace />;
 }
 
 export default function App() {
@@ -59,8 +76,15 @@ export default function App() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<DashboardLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route index element={<AppHome />} />
+          <Route element={<ModuleGuard moduleKey={MODULES.DASHBOARD} />}>
+            <Route path="dashboard" element={<Dashboard />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.WORKSPACE} />}>
+            <Route path="workspace" element={<WorkspacePage />} />
+            <Route path="workspace/:tab" element={<WorkspacePage />} />
+          </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.LEADS} />}>
             <Route path="leads" element={<LeadsList />} />
@@ -132,6 +156,35 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.OPPORTUNITIES} />}>
             <Route path="opportunities" element={<OpportunitiesPage />} />
+            <Route path="deal-room/:propertyId" element={<DealRoomPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.DISPUTES} />}>
+            <Route path="disputes" element={<DisputesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.INTELLIGENCE} />}>
+            <Route path="intelligence" element={<IntelligencePage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.INVOICES} />}>
+            <Route path="invoices" element={<InvoicesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.REPUTATION} />}>
+            <Route path="reputation" element={<ReputationPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.FRAUD} />}>
+            <Route path="fraud" element={<FraudPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.TRUST} />}>
+            <Route path="trust" element={<TrustPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.MATCHING} />}>
+            <Route path="matching" element={<MatchingPage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.INVESTORS} />}>

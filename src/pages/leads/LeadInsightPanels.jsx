@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LuSparkles, LuRefreshCw, LuSend, LuMessageCircle } from "react-icons/lu";
+import { LuSparkles, LuRefreshCw, LuSend, LuMessageCircle, LuUserCheck } from "react-icons/lu";
+import MatchBadge from "../../components/common/MatchBadge";
 import StatusBadge from "../../components/common/StatusBadge";
 import { useToast } from "../../components/common/ToastProvider";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
@@ -30,7 +31,9 @@ export default function LeadInsightPanels({ lead, role }) {
   const call = useApiCall();
   const allowed = INTEL_ROLES.includes(role);
   const analysis = useApiQuery(allowed ? `/ai/lead/${lead.id}/analysis` : null);
-  const matches = useApiQuery(allowed ? `/matching/recommendations/${lead.id}` : null);
+  // Sec. 7.3: the lead's requirement scored against the broker's own
+  // listings (A R staff: all live listings), with the parameter breakdown.
+  const matches = useApiQuery(allowed ? `/matching/leads/${lead.id}` : null);
   const chat = useApiQuery(`/whatsapp/conversations/${lead.id}`);
   const [busy, setBusy] = useState(null);
 
@@ -50,7 +53,8 @@ export default function LeadInsightPanels({ lead, role }) {
   };
 
   const insight = analysis.data;
-  const recommended = (matches.data || []).filter((m) => Number(m.relevance_score) > 0).slice(0, 5);
+  const recommended = (matches.data?.items || []).filter((m) => m.score >= 50).slice(0, 6);
+  const requirement = matches.data?.requirement;
   const messages = chat.data || [];
 
   return (
@@ -113,39 +117,64 @@ export default function LeadInsightPanels({ lead, role }) {
         )}
       </Card>
 
-      <Card title="Recommended properties" action={<span className="text-xs text-ink-400">matching engine</span>}>
+      <Card
+        title="Property matches"
+        action={<span className="text-xs text-ink-400">{requirement?.priority ? "Priority buyer" : "matching engine"}</span>}
+      >
         {matches.loading ? (
           <p className="text-xs text-ink-500">Finding matches…</p>
+        ) : !requirement ? (
+          <p className="text-xs text-ink-500">No requirement yet - add the customer's budget, location and type, or ask them to post a requirement.</p>
         ) : recommended.length === 0 ? (
-          <p className="text-xs text-ink-500">No matches yet - add the customer's budget, location and type on the lead.</p>
+          <p className="text-xs text-ink-500">No listings match this requirement yet.</p>
         ) : (
           <ul className="divide-y divide-line">
             {recommended.map((m) => (
-              <li key={m.id || m.property_id} className="flex items-start justify-between gap-2 py-2.5">
+              <li key={m.property.id} className="flex items-start justify-between gap-2 py-2.5">
                 <div className="min-w-0">
-                  <Link to={`/app/properties/${m.property_id}`} className="block truncate text-sm font-semibold text-ink-900 hover:text-red-600">
-                    {m.property?.title || "Property"}
+                  <Link to={`/app/properties/${m.property.id}`} className="block truncate text-sm font-semibold text-ink-900 hover:text-red-600">
+                    {m.property.title}
                   </Link>
-                  <p className="text-xs text-ink-500">
-                    {Math.round(Number(m.relevance_score))}% match · {m.property?.city || ""}
-                    {m.property?.price_value ? ` · ${formatINR(m.property.price_value)}` : ""}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <MatchBadge score={m.score} tier={m.tier} breakdown={m.breakdown} />
+                    {m.priceCompatible && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">Price-compatible</span>}
+                    <span className="text-xs text-ink-500">{m.property.city}{m.property.price_value ? ` · ${formatINR(m.property.price_value)}` : ""}</span>
+                  </div>
                 </div>
-                <button
-                  title="Share on WhatsApp"
-                  disabled={busy === m.property_id || !lead.customerMobile}
-                  className="shrink-0 rounded-lg border border-line p-1.5 text-green-600 hover:bg-green-50 disabled:opacity-40"
-                  onClick={() =>
-                    run(
-                      m.property_id,
-                      () => call("/whatsapp/share-property", { method: "POST", body: { leadId: lead.id, propertyId: m.property_id, phoneNumber: lead.customerMobile } }),
-                      "Shared on WhatsApp.",
-                      chat.reload
-                    )
-                  }
-                >
-                  <LuSend className="h-4 w-4" />
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  {requirement.id && m.score >= 60 && (
+                    <button
+                      title="Send to the buyer's matches"
+                      disabled={busy === `send-${m.property.id}`}
+                      className="rounded-lg border border-line p-1.5 text-ink-700 hover:bg-surface-muted disabled:opacity-40"
+                      onClick={() =>
+                        run(
+                          `send-${m.property.id}`,
+                          () => call(`/matching/requirements/${requirement.id}/send`, { method: "POST", body: { propertyId: m.property.id } }),
+                          "Sent to the buyer.",
+                          matches.reload
+                        )
+                      }
+                    >
+                      <LuUserCheck className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button
+                    title="Share on WhatsApp"
+                    disabled={busy === m.property.id || !lead.customerMobile}
+                    className="rounded-lg border border-line p-1.5 text-green-600 hover:bg-green-50 disabled:opacity-40"
+                    onClick={() =>
+                      run(
+                        m.property.id,
+                        () => call("/whatsapp/share-property", { method: "POST", body: { leadId: lead.id, propertyId: m.property.id, phoneNumber: lead.customerMobile } }),
+                        "Shared on WhatsApp.",
+                        chat.reload
+                      )
+                    }
+                  >
+                    <LuSend className="h-4 w-4" />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

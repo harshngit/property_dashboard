@@ -52,12 +52,29 @@ export const MODULES = {
   BUSINESS_LEADS: "business_leads",
   CONTENT: "content",
   ADMIN_PANEL: "admin_panel",
+  // Customer-facing Full CRM (sec. 13.2A): HNI investors from joining,
+  // other customers after the usage threshold - the page checks eligibility.
+  WORKSPACE: "workspace",
+  // Engine 5 Requirement Marketplace + matching engine controls.
+  MATCHING: "matching",
+  // Module 6 Trust & Reputation (score, badges, verifications, reviews).
+  TRUST: "trust",
+  // Sec. 9 verification, duplicates & fraud review desk (A R staff).
+  FRAUD: "fraud",
+  // Engine 5 disputes, lead conflicts and the due-diligence queue.
+  DISPUTES: "disputes",
+  // Module 40 professional-fee invoices (Instalment 1 / 2, lease).
+  INVOICES: "invoices",
+  // Engine 5 Deal Intelligence Dashboard.
+  INTELLIGENCE: "intelligence",
+  // Module 44 Reputation Graph.
+  REPUTATION: "reputation",
 };
 
 // Which modules each role can access, and which actions they get in list pages
 export const ROLE_ACCESS = {
   [ROLES.SUPER_ADMIN]: {
-    modules: Object.values(MODULES),
+    modules: Object.values(MODULES).filter((m) => m !== MODULES.WORKSPACE),
     actions: { create: true, edit: true, delete: true, approve: true, export: true },
   },
   [ROLES.ADMIN]: {
@@ -67,7 +84,7 @@ export const ROLE_ACCESS = {
       MODULES.DOCUMENTS, MODULES.PAYMENTS, MODULES.WHATSAPP, MODULES.AI,
       MODULES.REPORTS, MODULES.TASKS, MODULES.USERS,
       MODULES.OPPORTUNITIES, MODULES.INVESTORS, MODULES.BUSINESS_LEADS,
-      MODULES.CONTENT, MODULES.ADMIN_PANEL,
+      MODULES.CONTENT, MODULES.ADMIN_PANEL, MODULES.MATCHING, MODULES.TRUST, MODULES.FRAUD, MODULES.DISPUTES, MODULES.INVOICES, MODULES.INTELLIGENCE, MODULES.REPUTATION,
     ],
     actions: { create: true, edit: true, delete: true, approve: true, export: true },
   },
@@ -75,31 +92,31 @@ export const ROLE_ACCESS = {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.PROPERTIES, MODULES.CUSTOMERS,
       MODULES.BROKERS, MODULES.DEALS, MODULES.DOCUMENTS, MODULES.TASKS, MODULES.REPORTS,
-      MODULES.USERS, MODULES.BUSINESS_LEADS,
+      MODULES.USERS, MODULES.BUSINESS_LEADS, MODULES.MATCHING, MODULES.TRUST, MODULES.DISPUTES, MODULES.INVOICES, MODULES.INTELLIGENCE, MODULES.REPUTATION,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: true },
   },
   [ROLES.BROKER]: {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.PROPERTIES, MODULES.CUSTOMERS,
-      MODULES.DEALS, MODULES.DOCUMENTS, MODULES.TASKS,
+      MODULES.DEALS, MODULES.DOCUMENTS, MODULES.TASKS, MODULES.MATCHING, MODULES.TRUST, MODULES.DISPUTES, MODULES.INVOICES, MODULES.INTELLIGENCE, MODULES.REPUTATION,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: false },
   },
   [ROLES.BUILDER]: {
-    modules: [MODULES.DASHBOARD, MODULES.PROPERTIES, MODULES.PROJECTS, MODULES.LEADS, MODULES.DEALS, MODULES.REPORTS],
+    modules: [MODULES.DASHBOARD, MODULES.PROPERTIES, MODULES.PROJECTS, MODULES.LEADS, MODULES.DEALS, MODULES.REPORTS, MODULES.TRUST, MODULES.DISPUTES, MODULES.INVOICES, MODULES.INTELLIGENCE, MODULES.REPUTATION],
     actions: { create: true, edit: true, delete: false, approve: false, export: true },
   },
   [ROLES.SALES]: {
     modules: [
       MODULES.DASHBOARD, MODULES.LEADS, MODULES.CUSTOMERS, MODULES.PROPERTIES,
       MODULES.DEALS, MODULES.TASKS, MODULES.DOCUMENTS,
-      MODULES.OPPORTUNITIES, MODULES.INVESTORS, MODULES.BUSINESS_LEADS,
+      MODULES.OPPORTUNITIES, MODULES.INVESTORS, MODULES.BUSINESS_LEADS, MODULES.MATCHING, MODULES.TRUST, MODULES.FRAUD, MODULES.DISPUTES, MODULES.INVOICES, MODULES.INTELLIGENCE, MODULES.REPUTATION,
     ],
     actions: { create: true, edit: true, delete: false, approve: false, export: false },
   },
   [ROLES.CUSTOMER]: {
-    modules: [MODULES.DASHBOARD],
+    modules: [MODULES.WORKSPACE],
     actions: { create: false, edit: false, delete: false, approve: false, export: false },
   },
 };

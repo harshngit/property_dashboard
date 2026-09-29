@@ -14,6 +14,7 @@ import useAuth from "../../hooks/useAuth";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate, formatINR, titleCase } from "../../lib/format";
 import { STAGE_LABELS, STAGE_TRANSITIONS } from "../../redux/slices/dealsSlice";
+import OrchestrationPanel from "../../components/orchestration/OrchestrationPanel";
 
 // Deal detail (Screen 8): stage control, site visits (the customer sees
 // these in their website dashboard and is notified), negotiation / booking
@@ -23,6 +24,7 @@ import { STAGE_LABELS, STAGE_TRANSITIONS } from "../../redux/slices/dealsSlice";
 const MILESTONE_ROLES = ["broker", "agency_admin", "admin", "super_admin"];
 const DOC_TYPES = [
   { value: "agreement", label: "Agreement" },
+  { value: "agreement_to_sell", label: "Agreement to Sell" },
   { value: "kyc", label: "KYC" },
   { value: "payment_receipt", label: "Payment receipt" },
   { value: "noc", label: "NOC" },
@@ -61,6 +63,7 @@ export default function DealDetail() {
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const [docType, setDocType] = useState("agreement");
+  const [panelKey, setPanelKey] = useState(0);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -79,7 +82,11 @@ export default function DealDetail() {
       await fn();
       toast.push(message, "success");
       setModal(null);
+      // Module 40: re-check right away so auto-advance shows immediately.
+      await call(`/orchestration/deals/${id}/evaluate`, { method: "POST" }).catch(() => {});
       await after();
+      if (after !== reload) reload();
+      setPanelKey((k) => k + 1);
     } catch (err) {
       toast.push(err.message, "error");
     } finally {
@@ -161,6 +168,8 @@ export default function DealDetail() {
           </div>
         </div>
       </div>
+
+      <OrchestrationPanel key={panelKey} dealId={id} onChange={reload} />
 
       {!closed && permissions.edit && (
         <div className="flex flex-wrap gap-2">
@@ -390,10 +399,17 @@ export default function DealDetail() {
       <Modal open={modal === "stage"} onClose={() => setModal(null)} title="Move deal stage">
         <div className="space-y-4">
           <SelectField label="New stage" value={form.stage || ""} onChange={set("stage")} options={nextStages.map((s) => ({ value: s, label: STAGE_LABELS[s] }))} />
-          <TextareaField label="Notes (optional)" rows={3} value={form.notes || ""} onChange={set("notes")} />
+          <TextareaField label={form.override ? "Reason for the override (required)" : "Notes (optional)"} rows={3} value={form.notes || ""} onChange={set("notes")} />
+          <p className="text-xs text-ink-500">Moving forward needs the next stage's requirements met - the deal usually moves on by itself.</p>
+          {["admin", "super_admin"].includes(role) && (
+            <label className="flex items-center gap-2 text-sm text-ink-700">
+              <input type="checkbox" checked={!!form.override} onChange={(e) => setForm((f) => ({ ...f, override: e.target.checked }))} className="h-4 w-4 accent-red-600" />
+              Override missing requirements (logged)
+            </label>
+          )}
           <div className="flex justify-end gap-2">
             <button className="btn-outline" onClick={() => setModal(null)}>Cancel</button>
-            <button className="btn-primary" disabled={busy || !form.stage} onClick={() => run(() => call(`/deals/${id}/stage`, { method: "PUT", body: { stage: form.stage, notes: form.notes || undefined } }), "Stage updated.")}>
+            <button className="btn-primary" disabled={busy || !form.stage || (form.override && !form.notes)} onClick={() => run(() => call(`/deals/${id}/stage`, { method: "PUT", body: { stage: form.stage, notes: form.notes || undefined, override: form.override || undefined } }), "Stage updated.")}>
               Save
             </button>
           </div>

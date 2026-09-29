@@ -3,10 +3,19 @@ import {
   LuFileStack, LuWallet, LuMessageCircle, LuSparkles, LuChartColumn,
   LuListChecks, LuSettings, LuShieldCheck, LuNetwork, LuLandmark,
   LuGavel, LuGlobe, LuBriefcase, LuNewspaper, LuDatabase,
+  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints,
 } from "react-icons/lu";
 import { MODULES } from "./roles";
 
 export const NAV_ITEMS = [
+  // Investor workspace (customers only) - `end` keeps Overview from
+  // matching every /app/workspace/* route.
+  { key: MODULES.WORKSPACE, label: "Overview", to: "/app/workspace", icon: LuLayoutDashboard, end: true },
+  { key: MODULES.WORKSPACE, label: "Pipeline", to: "/app/workspace/pipeline", icon: LuKanban },
+  { key: MODULES.WORKSPACE, label: "Deal Flow", to: "/app/workspace/deals", icon: LuGavel },
+  { key: MODULES.WORKSPACE, label: "Activity", to: "/app/workspace/activity", icon: LuActivity },
+  { key: MODULES.WORKSPACE, label: "Saved Searches", to: "/app/workspace/saved", icon: LuSearch },
+  { key: MODULES.WORKSPACE, label: "Portfolio", to: "/app/workspace/portfolio", icon: LuChartPie },
   { key: MODULES.DASHBOARD, label: "Dashboard", to: "/app/dashboard", icon: LuLayoutDashboard },
   { key: MODULES.LEADS, label: "Leads", to: "/app/leads", icon: LuHandshake },
   { key: MODULES.PROPERTIES, label: "Properties", to: "/app/properties", icon: LuBuilding2 },
@@ -16,6 +25,13 @@ export const NAV_ITEMS = [
   { key: MODULES.BUILDERS, label: "Builders", to: "/app/builders", icon: LuBuilding2 },
   { key: MODULES.PROJECTS, label: "Projects", to: "/app/projects", icon: LuLandmark },
   { key: MODULES.DEALS, label: "Deal Pipeline", to: "/app/deals", icon: LuChartColumn },
+  { key: MODULES.MATCHING, label: "Requirement Marketplace", to: "/app/matching", icon: LuFlame },
+  { key: MODULES.TRUST, label: "Trust & Reviews", to: "/app/trust", icon: LuShieldCheck },
+  { key: MODULES.FRAUD, label: "Verification & Fraud", to: "/app/fraud", icon: LuShieldAlert },
+  { key: MODULES.DISPUTES, label: "Disputes & DD", to: "/app/disputes", icon: LuScale },
+  { key: MODULES.INTELLIGENCE, label: "Deal Intelligence", to: "/app/intelligence", icon: LuBrainCircuit },
+  { key: MODULES.INVOICES, label: "Invoice Centre", to: "/app/invoices", icon: LuReceipt },
+  { key: MODULES.REPUTATION, label: "Reputation Graph", to: "/app/reputation", icon: LuWaypoints },
   { key: MODULES.OPPORTUNITIES, label: "Opportunity Deals", to: "/app/opportunities", icon: LuGavel },
   { key: MODULES.INVESTORS, label: "NRI / HNI Investors", to: "/app/investors", icon: LuGlobe },
   { key: MODULES.BUSINESS_LEADS, label: "Business Leads", to: "/app/business-leads", icon: LuBriefcase },

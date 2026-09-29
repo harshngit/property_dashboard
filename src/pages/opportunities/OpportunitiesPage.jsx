@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { LuArrowRight, LuBan, LuUserCheck, LuRefreshCw, LuBellRing, LuEye, LuCircleCheck, LuCircleX, LuUpload } from "react-icons/lu";
+import { Link, useNavigate } from "react-router-dom";
+import { LuArrowRight, LuBan, LuUserCheck, LuRefreshCw, LuBellRing, LuEye, LuCircleCheck, LuCircleX, LuUpload, LuLockKeyhole } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
 import StatusBadge from "../../components/common/StatusBadge";
@@ -14,6 +14,9 @@ import { useToast } from "../../components/common/ToastProvider";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { apiRequest } from "../../api/client";
 import { formatDate, formatINR, titleCase } from "../../lib/format";
+import { AccessRequests } from "../deal-room/DealRoomPage";
+import CrawlersTab from "./CrawlersTab";
+import AlertsTab from "./AlertsTab";
 
 // Engine 4 - bank auction & special situation deals for staff:
 //   Pipeline  - investor interests, Lead -> Deal Interest -> Due Diligence ->
@@ -140,6 +143,7 @@ function Pipeline({ isAdmin }) {
 function LiveDeals({ isAdmin }) {
   const toast = useToast();
   const call = useApiCall();
+  const navigate = useNavigate();
   const { data, loading, reload } = useApiQuery("/opportunities?limit=100&includePast=true&sort=newest");
 
   const act = async (path, label) => {
@@ -167,6 +171,15 @@ function LiveDeals({ isAdmin }) {
   }));
 
   return (
+    <>
+    {isAdmin && (
+      <div className="mb-3 flex items-center justify-end gap-3">
+        <p className="text-xs text-ink-500">Scores learn from conversion history and refresh daily.</p>
+        <button className="btn-outline" onClick={() => act("/opportunities/rescore-all", "All deals rescored.")}>
+          <LuRefreshCw className="h-4 w-4" /> Re-score all deals
+        </button>
+      </div>
+    )}
     <DataTable
       columns={[
         { key: "title", label: "Deal", render: (r) => <Link to={`/app/properties/${r.id}`} className="font-semibold text-ink-900 hover:text-red-600">{r.title}</Link> },
@@ -182,21 +195,34 @@ function LiveDeals({ isAdmin }) {
       data={rows}
       loading={loading}
       searchKeys={["title", "city", "source"]}
-      filters={[{ key: "category", label: "Category", options: ["Auction", "Special Situation"] }]}
+      filters={[{ key: "category", label: "Category", options: ["Auction", "Special Situation", "Institutional"] }]}
       getActions={(row) => [
-        { label: "Edit listing", icon: LuEye, onClick: () => window.location.assign(`/app/properties/${row.id}/edit`) },
+        { label: "Edit listing", icon: LuEye, onClick: () => navigate(`/app/properties/${row.id}/edit`) },
+        { label: "Deal room", icon: LuLockKeyhole, onClick: () => navigate(`/app/deal-room/${row.id}`) },
         { label: "Recalculate score", icon: LuRefreshCw, onClick: () => act(`/opportunities/${row.id}/rescore`, "Rescored.") },
         { label: "Send investor alerts", icon: LuBellRing, hidden: !isAdmin, onClick: () => act(`/opportunities/${row.id}/send-alerts`, "Alerts sent.") },
       ]}
       emptyTitle="No live opportunities"
       emptySubtitle="Approve an auction or special situation listing, or publish from the intake queue."
     />
+    </>
   );
 }
+
+const EDITABLE_INTAKE_FIELDS = [
+  ["title", "Title", "text"], ["property_type", "Property type", "select"], ["city", "City", "text"], ["locality", "Locality", "text"],
+  ["reserve_price", "Reserve price (₹)", "number"], ["emd_amount", "EMD (₹)", "number"], ["auction_date", "Auction date", "date"], ["source_bank", "Bank / institution", "text"],
+];
+const PROPERTY_TYPE_OPTIONS = ["apartment", "villa", "independent_house", "plot", "commercial", "farmhouse", "other"];
 
 function IntakeQueue() {
   const toast = useToast();
   const call = useApiCall();
+  const navigate = useNavigate();
+  const [edits, setEdits] = useState({});
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [notice, setNotice] = useState({ sourceName: "", listingCategory: "auction", legalReview: false });
+  const noticeRef = useRef(null);
   const token = useSelector((s) => s.auth.accessToken);
   const fileRef = useRef(null);
   const [status, setStatus] = useState("needs_review");
@@ -223,12 +249,56 @@ function IntakeQueue() {
     }
   };
 
+  const openReview = (item) => {
+    setNotes("");
+    const n = item.normalised || {};
+    setEdits(Object.fromEntries(EDITABLE_INTAKE_FIELDS.map(([k]) => [k, n[k] == null ? "" : k === "auction_date" ? String(n[k]).slice(0, 10) : n[k]])));
+    setReviewing(item);
+  };
+
+  const uploadNotice = async () => {
+    const file = noticeRef.current?.files?.[0];
+    if (!file) return toast.push("Choose a PDF or text file.", "error");
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      Object.entries(notice).forEach(([k, v]) => v !== "" && form.append(k, String(v)));
+      const res = await apiRequest("/crawlers/parse-notice", { method: "POST", body: form, isFormData: true, token });
+      const p = res.data.parsed || {};
+      toast.push(`Parsed${p.parsed_by_ai ? " (with AI)" : ""}: ${p.reserve_price ? formatINR(p.reserve_price) : "no reserve price"}, auction ${p.auction_date || "date not found"} - queued for review.`, "success");
+      setNoticeOpen(false);
+      reload();
+    } catch (err) {
+      toast.push(err.message, "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const legalReview = async () => {
+    try {
+      const res = await call(`/opportunities/ingest/${reviewing.id}/legal-review`, { method: "POST", body: { notes: notes || undefined } });
+      toast.push("Legal review recorded - you can publish now.", "success");
+      setReviewing(res.data);
+      reload();
+    } catch (err) {
+      toast.push(err.message, "error");
+    }
+  };
+
   const decide = async (action) => {
     try {
       if (action === "publish") {
+        const n = reviewing.normalised || {};
+        const changed = Object.fromEntries(
+          Object.entries(edits)
+            .filter(([k, v]) => String(v ?? "") !== String(n[k] == null ? "" : k === "auction_date" ? String(n[k]).slice(0, 10) : n[k]))
+            .map(([k, v]) => [k, ["reserve_price", "emd_amount"].includes(k) ? (v === "" ? null : Number(v)) : v === "" ? null : v]),
+        );
         await call(`/opportunities/ingest/${reviewing.id}/publish`, {
           method: "POST",
-          body: { notes: notes || undefined, forceDespiteDuplicate: reviewing.status === "duplicate" || undefined },
+          body: { notes: notes || undefined, forceDespiteDuplicate: reviewing.status === "duplicate" || undefined, normalised: Object.keys(changed).length ? changed : undefined },
         });
         toast.push("Published - matched investors are being alerted.", "success");
       } else {
@@ -273,10 +343,15 @@ function IntakeQueue() {
             </button>
           ))}
         </div>
-        <label className="btn-outline btn-sm cursor-pointer">
-          {uploading ? <InlineSpinner /> : <LuUpload className="h-3.5 w-3.5" />} Upload auction CSV
-          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => uploadCsv(e.target.files?.[0])} />
-        </label>
+        <div className="flex gap-2">
+          <button className="btn-outline btn-sm" onClick={() => setNoticeOpen(true)}>
+            <LuUpload className="h-3.5 w-3.5" /> Upload notice (PDF)
+          </button>
+          <label className="btn-outline btn-sm cursor-pointer">
+            {uploading ? <InlineSpinner /> : <LuUpload className="h-3.5 w-3.5" />} Upload auction CSV
+            <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => uploadCsv(e.target.files?.[0])} />
+          </label>
+        </div>
       </div>
       <DataTable
         columns={[
@@ -287,7 +362,16 @@ function IntakeQueue() {
           { key: "auction", label: "Auction" },
           { key: "confidence", label: "Confidence" },
           { key: "issues", label: "Issues" },
-          { key: "status", label: "Status", render: (r) => <StatusBadge value={r.status} /> },
+          {
+            key: "status",
+            label: "Status",
+            render: (r) => (
+              <div className="flex flex-wrap gap-1">
+                <StatusBadge value={r.status} />
+                {r.raw.requires_legal_review && <StatusBadge value={r.raw.legal_reviewed_at ? "Legal OK" : "Legal review"} />}
+              </div>
+            ),
+          },
         ]}
         data={rows}
         loading={loading}
@@ -297,9 +381,9 @@ function IntakeQueue() {
             label: "Review",
             icon: LuEye,
             hidden: !["needs_review", "duplicate"].includes(row.raw.status),
-            onClick: () => { setNotes(""); setReviewing(row.raw); },
+            onClick: () => openReview(row.raw),
           },
-          { label: "Open listing", icon: LuEye, hidden: !row.raw.property_id, onClick: () => window.location.assign(`/app/properties/${row.raw.property_id}`) },
+          { label: "Open listing", icon: LuEye, hidden: !row.raw.property_id, onClick: () => navigate(`/app/properties/${row.raw.property_id}`) },
         ]}
         emptyTitle="Nothing in this queue"
         emptySubtitle="Crawler and CSV auction records land here for review before publishing."
@@ -324,6 +408,31 @@ function IntakeQueue() {
                 {reviewing.issues.map((i) => `${titleCase(i.field)}: ${i.issue}`).join(" • ")}
               </div>
             )}
+            <div className="rounded-lg border border-line p-3">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Correct before publishing</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {EDITABLE_INTAKE_FIELDS.map(([k, label, type]) => (
+                  <label key={k} className="block text-xs">
+                    <span className="text-ink-500">{label}</span>
+                    {type === "select" ? (
+                      <select className="field-select h-8" value={edits[k] || ""} onChange={(e) => setEdits((x) => ({ ...x, [k]: e.target.value }))}>
+                        <option value="">—</option>
+                        {PROPERTY_TYPE_OPTIONS.map((o) => <option key={o} value={o}>{titleCase(o)}</option>)}
+                      </select>
+                    ) : (
+                      <input className="field-input h-8" type={type} value={edits[k] ?? ""} onChange={(e) => setEdits((x) => ({ ...x, [k]: e.target.value }))} />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {reviewing.requires_legal_review && (
+              <p className={`rounded-lg px-3 py-2 text-xs ${reviewing.legal_reviewed_at ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"}`}>
+                {reviewing.legal_reviewed_at
+                  ? `Legal review recorded ${formatDate(reviewing.legal_reviewed_at, true)}${reviewing.legal_review_notes ? ` - ${reviewing.legal_review_notes}` : ""}.`
+                  : "From a legal / newspaper notice - the lawyer panel must review it before it can go live."}
+              </p>
+            )}
             {reviewing.status === "duplicate" && (
               <p className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-ink-700">
                 Looks like a duplicate of an existing listing. Publishing will create a second listing.
@@ -334,14 +443,85 @@ function IntakeQueue() {
               <button className="btn-outline text-coral-600" onClick={() => decide("reject")}>
                 <LuCircleX className="h-4 w-4" /> Reject
               </button>
-              <button className="btn-primary" onClick={() => decide("publish")}>
-                <LuCircleCheck className="h-4 w-4" /> Publish
-              </button>
+              {reviewing.requires_legal_review && !reviewing.legal_reviewed_at ? (
+                <button className="btn-primary" onClick={legalReview}>
+                  <LuCircleCheck className="h-4 w-4" /> Record legal review
+                </button>
+              ) : (
+                <button className="btn-primary" onClick={() => decide("publish")}>
+                  <LuCircleCheck className="h-4 w-4" /> Publish
+                </button>
+              )}
             </div>
           </div>
         )}
       </Modal>
+      <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} title="Upload an auction / sale notice" description="PDF or text - read by the same parser as the crawlers (regex, plus AI when configured) and queued for review.">
+        <div className="space-y-3 text-sm">
+          <label className="block"><span className="field-label">Source</span><input className="field-input" placeholder="e.g. Hindustan Times - public notice, 12 Oct" value={notice.sourceName} onChange={(e) => setNotice((x) => ({ ...x, sourceName: e.target.value }))} /></label>
+          <label className="block"><span className="field-label">Category</span>
+            <select className="field-select" value={notice.listingCategory} onChange={(e) => setNotice((x) => ({ ...x, listingCategory: e.target.value }))}>
+              <option value="auction">Bank auction</option>
+              <option value="special_situation">Special situation</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={notice.legalReview} onChange={(e) => setNotice((x) => ({ ...x, legalReview: e.target.checked }))} /> Needs lawyer-panel review (newspaper / legal notice)</label>
+          <input ref={noticeRef} type="file" accept=".pdf,.txt,application/pdf,text/plain" className="block w-full" />
+          <div className="flex justify-end gap-2">
+            <button className="btn-outline" onClick={() => setNoticeOpen(false)}>Cancel</button>
+            <button className="btn-primary" disabled={uploading} onClick={uploadNotice}>{uploading ? "Parsing…" : "Parse & queue"}</button>
+          </div>
+        </div>
+      </Modal>
     </>
+  );
+}
+
+// Every deal with a deal room, and NDA-signed access requests across deals.
+function DealRooms() {
+  const rooms = useApiQuery("/deal-room/manage/rooms");
+  const [status, setStatus] = useState("pending_approval");
+  const requests = useApiQuery(`/deal-room/manage/requests${status ? `?status=${status}` : ""}`);
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ink-500">Access requests</h3>
+          <select className="field-select h-9 w-48" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="pending_approval">Pending approval</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="revoked">Revoked</option>
+            <option value="">All</option>
+          </select>
+        </div>
+        <AccessRequests rows={requests.data || []} showDeal onChanged={() => { requests.reload(); rooms.reload(); }} />
+      </div>
+      <div>
+        <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-ink-500">Deal rooms</h3>
+        <div className="card overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-500">
+              <tr><th className="px-4 py-3">Deal</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Documents</th><th className="px-4 py-3">Pending</th><th className="px-4 py-3">Approved investors</th></tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {(rooms.data || []).map((r) => (
+                <tr key={r.id}>
+                  <td className="px-4 py-2.5"><Link to={`/app/deal-room/${r.id}`} className="font-semibold text-ink-900 hover:text-red-600">{r.title}</Link><p className="text-xs text-ink-500">{r.city}</p></td>
+                  <td className="px-4 py-2.5">{titleCase(r.listing_category)}</td>
+                  <td className="px-4 py-2.5">{r.documents}</td>
+                  <td className={`px-4 py-2.5 ${r.pending_requests ? "font-semibold text-coral-600" : ""}`}>{r.pending_requests}</td>
+                  <td className="px-4 py-2.5">{r.approved_users}</td>
+                </tr>
+              ))}
+              {(rooms.data || []).length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-ink-500">No deal rooms yet - open a live deal and choose “Deal room” to add documents.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -363,7 +543,7 @@ export default function OpportunitiesPage() {
     ];
   }, [summary]);
 
-  const tabs = [["pipeline", "Pipeline"], ["live", "Live deals"], ...(isAdmin ? [["intake", "Intake queue"]] : [])];
+  const tabs = [["pipeline", "Pipeline"], ["live", "Live deals"], ["rooms", "Deal rooms"], ["alerts", "Investor alerts"], ...(isAdmin ? [["intake", "Intake queue"], ["crawlers", "Crawlers"]] : [])];
 
   return (
     <div>
@@ -404,6 +584,9 @@ export default function OpportunitiesPage() {
       {tab === "pipeline" && <Pipeline isAdmin={isAdmin} />}
       {tab === "live" && <LiveDeals isAdmin={isAdmin} />}
       {tab === "intake" && <IntakeQueue />}
+      {tab === "rooms" && <DealRooms />}
+      {tab === "crawlers" && <CrawlersTab />}
+      {tab === "alerts" && <AlertsTab />}
     </div>
   );
 }

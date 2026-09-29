@@ -228,7 +228,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user && accessToken) {
-      const dest = location.state?.from?.pathname || "/app/dashboard";
+      const dest = location.state?.from?.pathname || "/app";
       navigate(dest, { replace: true });
     }
   }, [user, accessToken, navigate, location]);

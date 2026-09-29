@@ -86,6 +86,8 @@ const normalizeProperty = (p) =>
         parkingType: p.parking_type || p.parkingType,
         ageOfProperty: p.age_of_property || p.ageOfProperty,
         gatedCommunity: p.gated_community ?? p.gatedCommunity ?? false,
+        mandateType: p.mandate_type ?? p.mandateType ?? "standard",
+        minAcceptablePrice: p.min_acceptable_price ?? p.minAcceptablePrice ?? null,
         faqs: (p.faqs || []).map((f) => ({ question: f.question, answer: f.answer })),
         status: p.status,
         rejectionReason: p.rejection_reason,
@@ -143,6 +145,8 @@ const PROPERTY_FIELDS = [
   "opportunitySourceType", "reservePrice", "emdAmount", "emdDeadline", "inspectionDate",
   "auctionReferenceId", "auctionPortalUrl", "possessionType", "legalStatusNote",
   "estimatedMarketValue", "situationTags", "riskIndicators",
+  // Exclusive Mandate + private minimum price (matching boosts, sec. 7)
+  "mandateType", "minAcceptablePrice",
 ];
 
 export const createProperty = createAsyncThunk(

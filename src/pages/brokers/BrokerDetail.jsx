@@ -14,6 +14,7 @@ import { ConfirmDialog } from "../../components/common/Modal";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
+import TrustPanel from "../../components/trust/TrustPanel";
 import {
   fetchUserById, updateUser, deleteUser, clearCurrentUser,
 } from "../../redux/slices/usersSlice";
@@ -248,6 +249,7 @@ export default function BrokerDetail() {
 
         {/* Right — performance */}
         <div className="space-y-5 lg:col-span-3">
+          <TrustPanel userId={id} />
           <div className="card p-5">
             <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-ink-500">Performance</h4>
             <div className="grid grid-cols-2 gap-3">
