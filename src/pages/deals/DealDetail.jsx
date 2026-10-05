@@ -15,6 +15,7 @@ import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate, formatINR, titleCase } from "../../lib/format";
 import { STAGE_LABELS, STAGE_TRANSITIONS } from "../../redux/slices/dealsSlice";
 import OrchestrationPanel from "../../components/orchestration/OrchestrationPanel";
+import MandateDealPanel from "../../components/mandates/MandateDealPanel";
 
 // Deal detail (Screen 8): stage control, site visits (the customer sees
 // these in their website dashboard and is notified), negotiation / booking
@@ -125,6 +126,9 @@ export default function DealDetail() {
         <LuArrowLeft className="h-4 w-4" /> All deals
       </button>
 
+      {/* Module 46 Mandate Status Panel - assigned rep and admins only */}
+      {["internal_sales", "admin", "super_admin"].includes(role) && <MandateDealPanel dealId={id} />}
+
       <div className="card flex flex-wrap items-start justify-between gap-4 p-5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -179,9 +183,11 @@ export default function DealDetail() {
           <button className="btn-outline btn-sm" onClick={() => open("negotiation")}>
             <LuHandshake className="h-4 w-4" /> Log offer
           </button>
-          <button className="btn-outline btn-sm" onClick={() => open("booking")}>
-            <LuReceiptIndianRupee className="h-4 w-4" /> Record booking
-          </button>
+          {deal.stage === "negotiation" && (
+            <button className="btn-outline btn-sm" onClick={() => open("booking")}>
+              <LuReceiptIndianRupee className="h-4 w-4" /> Record booking &amp; start legal
+            </button>
+          )}
           {nextStages.length > 0 && (
             <button className="btn-outline btn-sm" onClick={() => open("stage", { stage: nextStages[0] })}>
               Move stage
@@ -375,7 +381,7 @@ export default function DealDetail() {
         </div>
       </Modal>
 
-      <Modal open={modal === "negotiation" || modal === "booking"} onClose={() => setModal(null)} title={modal === "booking" ? "Record booking" : "Log offer"}>
+      <Modal open={modal === "negotiation" || modal === "booking"} onClose={() => setModal(null)} title={modal === "booking" ? "Record booking - moves to Legal Coordination" : "Log offer"}>
         <div className="space-y-4">
           <TextField label={modal === "booking" ? "Booking amount (₹)" : "Offer amount (₹)"} type="number" value={form.amount || ""} onChange={set("amount")} />
           <TextareaField label="Notes" rows={3} value={form.notes || ""} onChange={set("notes")} />

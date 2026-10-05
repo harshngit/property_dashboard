@@ -3,7 +3,7 @@ import {
   LuFileStack, LuWallet, LuMessageCircle, LuSparkles, LuChartColumn,
   LuListChecks, LuSettings, LuShieldCheck, LuNetwork, LuLandmark,
   LuGavel, LuGlobe, LuBriefcase, LuNewspaper, LuDatabase,
-  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints,
+  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints, LuScrollText, LuUserCheck, LuInbox,
 } from "react-icons/lu";
 import { MODULES } from "./roles";
 
@@ -30,6 +30,9 @@ export const NAV_ITEMS = [
   { key: MODULES.FRAUD, label: "Verification & Fraud", to: "/app/fraud", icon: LuShieldAlert },
   { key: MODULES.DISPUTES, label: "Disputes & DD", to: "/app/disputes", icon: LuScale },
   { key: MODULES.INTELLIGENCE, label: "Deal Intelligence", to: "/app/intelligence", icon: LuBrainCircuit },
+  { key: MODULES.MANDATES, label: "Mandates", to: "/app/mandates", icon: LuScrollText },
+  { key: MODULES.REPRESENTATIVES, label: "Representatives", to: "/app/representatives", icon: LuUserCheck },
+  { key: MODULES.LEAD_SOURCES, label: "Lead Sources", to: "/app/lead-sources", icon: LuInbox },
   { key: MODULES.INVOICES, label: "Invoice Centre", to: "/app/invoices", icon: LuReceipt },
   { key: MODULES.REPUTATION, label: "Reputation Graph", to: "/app/reputation", icon: LuWaypoints },
   { key: MODULES.OPPORTUNITIES, label: "Opportunity Deals", to: "/app/opportunities", icon: LuGavel },

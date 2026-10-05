@@ -30,6 +30,38 @@ const EXAMPLE_CONFIG = {
   pdf_links: { linkSelector: "a[href$='.pdf']", maxPdfs: 10, constants: { source_bank: "Bank name" } },
 };
 
+// Reference-data modules (crawler_rera / crawler_nhb_rbi / crawler_portal_market):
+// the mapping's field names are that table's columns.
+const OUTPUT_LABEL = { opportunity: "Auction / deal listings", rera_projects: "RERA project registry", price_indices: "Price indices (NHB / RBI)", market_stats: "Market statistics" };
+const REFERENCE_CONFIG = {
+  rera_projects: {
+    itemSelector: "table tbody tr",
+    fields: { rera_number: "td:nth-child(1)", project_name: "td:nth-child(2)", promoter_name: "td:nth-child(3)", district: "td:nth-child(4)", project_status: "td:nth-child(5)", approved_units: "td:nth-child(6)", complaints_count: "td:nth-child(7)", proposed_completion_date: "td:nth-child(8)" },
+    nextPageSelector: "a.next",
+    constants: { state: "State name" },
+  },
+  price_indices: {
+    itemSelector: "table tbody tr",
+    fields: { city: "td:nth-child(1)", index_value: "td:nth-child(2)", yoy_change_percent: "td:nth-child(3)", qoq_change_percent: "td:nth-child(4)" },
+    constants: { index_source: "nhb_residex", index_kind: "composite", period: "Q1 2025-26" },
+  },
+  market_stats: {
+    itemSelector: "table tbody tr",
+    fields: { locality: "td:nth-child(1)", avg_price_per_sqft: "td:nth-child(2)", price_change_percent: "td:nth-child(3)", supply_count: "td:nth-child(4)", rental_yield_percent: "td:nth-child(5)" },
+    constants: { city: "City name", property_type: "apartment", transaction_type: "sell" },
+  },
+};
+const REFERENCE_PDF_CONFIG = { linkSelector: "a[href$='.pdf']", maxPdfs: 5, rowPattern: "", constants: {} };
+const REFERENCE_HELP = {
+  rera_projects: "Fields: rera_number (required), project_name, promoter_name, district, city, project_status, approved_units, complaints_count, registration_date, proposed_completion_date. Put the state in constants. Public registry pages only.",
+  price_indices: "Fields: city, index_value (required), yoy_change_percent, qoq_change_percent, period (e.g. \"Q1 2025-26\"), index_kind. For PDF reports (text or scanned - read by OCR) each line \"City index YoY QoQ\" is picked up; set rowPattern (a regular expression with named groups) for other layouts.",
+  market_stats: "Aggregated market pages ONLY - never individual listings. Fields: city, locality, property_type, transaction_type, avg_price_per_sqft, min_price_per_sqft, max_price_per_sqft, price_change_percent, demand_index, supply_count, rental_yield_percent. Rows that look like a listing or carry contact details are rejected. Used for benchmarks only; the portal is never named publicly.",
+};
+const exampleFor = (source, adapter) => {
+  if (source.output && source.output !== "opportunity") return adapter === "pdf_links" ? REFERENCE_PDF_CONFIG : REFERENCE_CONFIG[source.output];
+  return EXAMPLE_CONFIG[adapter];
+};
+
 const STATUS_LABEL = { idle: "Idle", running: "Running", healthy: "Healthy", failing: "Failing", dead_letter: "Dead letter" };
 
 function ConfigModal({ source, onClose, onSaved }) {
@@ -43,9 +75,11 @@ function ConfigModal({ source, onClose, onSaved }) {
     defaultListingCategory: source.default_listing_category,
     requiresLegalReview: source.requires_legal_review,
     useAiParser: source.use_ai_parser,
-    config: JSON.stringify(Object.keys(source.config || {}).length ? source.config : EXAMPLE_CONFIG[source.adapter], null, 2),
+    // A seeded source only carries its constants - start from the example mapping, keeping them.
+    config: JSON.stringify((source.config || {}).itemSelector || (source.config || {}).fields || (source.config || {}).linkSelector ? source.config : { ...exampleFor(source, source.adapter), ...(Object.keys(source.config?.constants || {}).length ? { constants: { ...(exampleFor(source, source.adapter).constants || {}), ...source.config.constants } } : {}) }, null, 2),
   });
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  const reference = source.output && source.output !== "opportunity";
   const save = async () => {
     let config;
     try {
@@ -70,24 +104,30 @@ function ConfigModal({ source, onClose, onSaved }) {
         <label className="block"><span className="field-label">Listing / API / feed URL</span><input className="field-input" value={f.listUrl} onChange={set("listUrl")} placeholder="https://…" /></label>
         <div className="grid gap-3 sm:grid-cols-4">
           <label className="block"><span className="field-label">Adapter</span>
-            <select className="field-select" value={f.adapter} onChange={(e) => setF((x) => ({ ...x, adapter: e.target.value, config: JSON.stringify(EXAMPLE_CONFIG[e.target.value], null, 2) }))}>
+            <select className="field-select" value={f.adapter} onChange={(e) => setF((x) => ({ ...x, adapter: e.target.value, config: JSON.stringify(exampleFor(source, e.target.value), null, 2) }))}>
               <option value="html_list">HTML table / list</option><option value="json_api">JSON API</option><option value="rss">RSS / Atom</option><option value="pdf_links">PDF notices</option>
             </select>
           </label>
           <label className="block"><span className="field-label">Every (hours)</span><input type="number" min="1" max="720" className="field-input" value={f.scheduleHours} onChange={set("scheduleHours")} /></label>
           <label className="block"><span className="field-label">Max pages</span><input type="number" min="1" max="50" className="field-input" value={f.maxPages} onChange={set("maxPages")} /></label>
-          <label className="block"><span className="field-label">Lists as</span>
-            <select className="field-select" value={f.defaultListingCategory} onChange={set("defaultListingCategory")}><option value="auction">Bank auction</option><option value="special_situation">Special situation</option></select>
-          </label>
+          {reference ? (
+            <div className="block"><span className="field-label">Stores into</span><p className="pt-2 text-sm font-semibold text-ink-900">{OUTPUT_LABEL[source.output]}</p></div>
+          ) : (
+            <label className="block"><span className="field-label">Lists as</span>
+              <select className="field-select" value={f.defaultListingCategory} onChange={set("defaultListingCategory")}><option value="auction">Bank auction</option><option value="special_situation">Special situation</option></select>
+            </label>
+          )}
         </div>
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={f.requiresLegalReview} onChange={set("requiresLegalReview")} /> Lawyer-panel review before publishing</label>
-          <label className="flex items-center gap-2"><input type="checkbox" checked={f.useAiParser} onChange={set("useAiParser")} /> AI parser for fields the mapping misses</label>
-        </div>
+        {!reference && (
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={f.requiresLegalReview} onChange={set("requiresLegalReview")} /> Lawyer-panel review before publishing</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={f.useAiParser} onChange={set("useAiParser")} /> AI parser for fields the mapping misses</label>
+          </div>
+        )}
         <label className="block">
           <span className="field-label">Field mapping (JSON)</span>
           <textarea className="field-input h-64 py-2 font-mono text-xs" value={f.config} onChange={set("config")} />
-          <span className="text-[11px] text-ink-400">CSS selectors (html_list) or JSON paths (json_api) for: title, city, locality, pincode, reserve_price, emd_amount, auction_date, emd_deadline, inspection_date, auction_reference_id, auction_portal_url, possession, area. "constants" are added to every record. Contact details are never stored.</span>
+          <span className="text-[11px] text-ink-400">{reference ? REFERENCE_HELP[source.output] : null}{reference ? "" : "CSS selectors (html_list) or JSON paths (json_api) for: title, city, locality, pincode, reserve_price, emd_amount, auction_date, emd_deadline, inspection_date, auction_reference_id, auction_portal_url, possession, area. \"constants\" are added to every record. Contact details are never stored. Scanned PDF notices are read by OCR."}</span>
         </label>
         <div className="flex justify-end gap-2">
           <button className="btn-outline" onClick={onClose}>Cancel</button>
@@ -110,6 +150,8 @@ export default function CrawlersTab() {
   const [testResult, setTestResult] = useState(null);
   const [busy, setBusy] = useState(null);
   const runs = useApiQuery(runsFor ? `/crawlers/runs?sourceId=${runsFor.id}&limit=30` : null);
+  const market = useApiQuery("/market/overview");
+  const [marketTab, setMarketTab] = useState("stats");
 
   const reload = () => {
     health.reload();
@@ -164,7 +206,7 @@ export default function CrawlersTab() {
               <tr key={s.id} className={s.status === "dead_letter" ? "bg-red-50/40" : ""}>
                 <td className="px-4 py-2.5">
                   <p className="font-semibold text-ink-900">{s.name}</p>
-                  <p className="text-xs text-ink-500">{titleCase(s.category)} · {s.adapter} · every {s.schedule_hours}h{s.requires_legal_review ? " · legal review" : ""}{s.use_ai_parser ? " · AI" : ""}</p>
+                  <p className="text-xs text-ink-500">{titleCase(s.category)}{s.output && s.output !== "opportunity" ? ` → ${OUTPUT_LABEL[s.output]}` : ""} · {s.adapter} · every {s.schedule_hours}h{s.requires_legal_review ? " · legal review" : ""}{s.use_ai_parser ? " · AI" : ""}</p>
                 </td>
                 <td className="px-4 py-2.5">
                   <button className="text-left" onClick={() => { setApprovalNotes(s.legal_notes || ""); setApproving(s); }}>
@@ -199,7 +241,7 @@ export default function CrawlersTab() {
                     <span className="inline-flex gap-2 text-ink-500">
                       <button title="Configure" className="hover:text-ink-900" onClick={() => setConfiguring(s)}><LuSettings2 className="h-4 w-4" /></button>
                       <button title="Test run (parse only)" className="hover:text-indigo-600" onClick={() => act(s, `/crawlers/sources/${s.id}/run?mode=test`, { method: "POST" }, (d) => `Test: ${d.found} record(s) from ${d.pages} page(s).`, setTestResult)}><LuFlaskConical className="h-4 w-4" /></button>
-                      <button title="Run now" disabled={!s.legal_approved} className="hover:text-green-700 disabled:opacity-30" onClick={() => act(s, `/crawlers/sources/${s.id}/run`, { method: "POST" }, (d) => `Crawled ${d.found} record(s): ${d.summary?.needs_review ?? 0} to review, ${d.summary?.duplicate ?? 0} duplicates, ${d.summary?.skipped_existing ?? 0} already seen.`)}><LuPlay className="h-4 w-4" /></button>
+                      <button title="Run now" disabled={!s.legal_approved} className="hover:text-green-700 disabled:opacity-30" onClick={() => act(s, `/crawlers/sources/${s.id}/run`, { method: "POST" }, (d) => (d.output && d.output !== "opportunity" ? `${OUTPUT_LABEL[d.output]}: ${d.summary?.stored ?? 0} new, ${d.summary?.updated ?? 0} updated, ${d.summary?.rejected ?? 0} rejected${d.ocrPages ? ` (${d.ocrPages} page(s) read by OCR)` : ""}.` : `Crawled ${d.found} record(s): ${d.summary?.needs_review ?? 0} to review, ${d.summary?.duplicate ?? 0} duplicates, ${d.summary?.skipped_existing ?? 0} already seen.`), market.reload)}><LuPlay className="h-4 w-4" /></button>
                       {["dead_letter", "failing"].includes(s.status) && <button title="Reset" className="hover:text-amber-700" onClick={() => act(s, `/crawlers/sources/${s.id}/reset`, { method: "POST" }, "Reset - it will run on the next cycle.")}><LuRotateCcw className="h-4 w-4" /></button>}
                       <button title="Run history" className="hover:text-ink-900" onClick={() => setRunsFor(s)}><LuHistory className="h-4 w-4" /></button>
                     </span>
@@ -210,6 +252,59 @@ export default function CrawlersTab() {
           </tbody>
         </table>
       </div>
+
+      {/* Reference data held from the RERA / NHB-RBI / portal-market crawlers */}
+      {market.data && (
+        <div className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-ink-500">Market & registry data</h3>
+            <div className="flex gap-1 rounded-lg bg-surface-muted p-1">
+              {[["stats", `Market stats (${market.data.counts.market_stats})`], ["indices", `Price indices (${market.data.counts.price_indices})`], ["rera", `RERA (${market.data.counts.rera_projects})`]].map(([k, l]) => (
+                <button key={k} onClick={() => setMarketTab(k)} className={`rounded-md px-3 py-1 text-xs font-semibold ${marketTab === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-ink-500">{market.data.disclaimer} Portal figures are for benchmarking only - never shown as listings, and the portal is not named on the website.</p>
+          <div className="mt-3 max-h-[320px] overflow-auto">
+            {marketTab === "stats" && (
+              <table className="w-full min-w-[720px] text-xs">
+                <thead className="text-left uppercase text-ink-500"><tr><th className="py-2">Area</th><th>Portal</th><th>Type</th><th>Avg ₹ / sq ft</th><th>Change</th><th>Supply</th><th>Yield</th><th>As of</th></tr></thead>
+                <tbody className="divide-y divide-line">
+                  {market.data.marketStats.map((r, i) => (
+                    <tr key={i}><td className="py-1.5 font-semibold text-ink-900">{[r.locality, r.city].filter(Boolean).join(", ")}</td><td>{r.portal_key.replace("portal_", "")}</td><td>{r.property_type} · {r.transaction_type}</td><td>{r.avg_price_per_sqft != null ? Number(r.avg_price_per_sqft).toLocaleString("en-IN") : "—"}</td><td>{r.price_change_percent != null ? `${r.price_change_percent}%` : "—"}</td><td>{r.supply_count ?? "—"}</td><td>{r.rental_yield_percent != null ? `${r.rental_yield_percent}%` : "—"}</td><td>{formatDate(r.captured_on)}</td></tr>
+                  ))}
+                  {market.data.marketStats.length === 0 && <tr><td colSpan={8} className="py-6 text-center text-ink-500">No market statistics yet - configure and approve a portal market source.</td></tr>}
+                </tbody>
+              </table>
+            )}
+            {marketTab === "indices" && (
+              <table className="w-full min-w-[560px] text-xs">
+                <thead className="text-left uppercase text-ink-500"><tr><th className="py-2">City</th><th>Index</th><th>Period</th><th>Value</th><th>YoY</th><th>QoQ</th></tr></thead>
+                <tbody className="divide-y divide-line">
+                  {market.data.priceIndices.map((r, i) => (
+                    <tr key={i}><td className="py-1.5 font-semibold text-ink-900">{r.city}</td><td>{r.index_source === "nhb_residex" ? "NHB Residex" : r.index_source === "rbi_hpi" ? "RBI HPI" : r.index_source}</td><td>{r.period}</td><td>{Number(r.index_value)}</td><td>{r.yoy_change_percent != null ? `${r.yoy_change_percent}%` : "—"}</td><td>{r.qoq_change_percent != null ? `${r.qoq_change_percent}%` : "—"}</td></tr>
+                  ))}
+                  {market.data.priceIndices.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-ink-500">No price indices yet.</td></tr>}
+                </tbody>
+              </table>
+            )}
+            {marketTab === "rera" && (
+              <>
+                <p className="text-xs text-ink-600">{market.data.counts.rera_projects} projects in the registry · {market.data.counts.rera_flagged} delayed, lapsed or revoked. A listing's RERA number is checked against this in its due-diligence report.</p>
+                <table className="mt-2 w-full min-w-[480px] text-xs">
+                  <thead className="text-left uppercase text-ink-500"><tr><th className="py-2">Promoters to watch</th><th>Projects</th><th>Delayed</th><th>Complaints</th></tr></thead>
+                  <tbody className="divide-y divide-line">
+                    {market.data.promotersToWatch.map((r) => (
+                      <tr key={r.promoter_name}><td className="py-1.5 font-semibold text-ink-900">{r.promoter_name}</td><td>{r.projects}</td><td className={r.delayed ? "font-semibold text-red-600" : ""}>{r.delayed}</td><td>{r.complaints}</td></tr>
+                    ))}
+                    {market.data.promotersToWatch.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-ink-500">Nothing flagged.</td></tr>}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {configuring && <ConfigModal source={configuring} onClose={() => setConfiguring(null)} onSaved={() => { setConfiguring(null); reload(); }} />}
 

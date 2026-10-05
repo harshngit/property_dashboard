@@ -50,6 +50,9 @@ import TrustPage from "./pages/trust/TrustPage";
 import FraudPage from "./pages/fraud/FraudPage";
 import DisputesPage from "./pages/disputes/DisputesPage";
 import InvoicesPage from "./pages/invoices/InvoicesPage";
+import MandatesPage from "./pages/mandates/MandatesPage";
+import RepresentativesPage from "./pages/representatives/RepresentativesPage";
+import LeadSourcesPage from "./pages/lead-sources/LeadSourcesPage";
 import IntelligencePage from "./pages/intelligence/IntelligencePage";
 import ReputationPage from "./pages/reputation/ReputationPage";
 import { MODULES } from "./config/roles";
@@ -169,6 +172,18 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.INVOICES} />}>
             <Route path="invoices" element={<InvoicesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.MANDATES} />}>
+            <Route path="mandates" element={<MandatesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.REPRESENTATIVES} />}>
+            <Route path="representatives" element={<RepresentativesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.LEAD_SOURCES} />}>
+            <Route path="lead-sources" element={<LeadSourcesPage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.REPUTATION} />}>

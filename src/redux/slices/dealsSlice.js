@@ -5,31 +5,13 @@ import { apiRequest } from "../../api/client";
 // as the DataTable/kanban group key. STAGE_TRANSITIONS mirrors the backend's
 // allowed-transitions map (deal.service.js) so an invalid kanban drop is
 // rejected client-side too, instead of only failing after a round trip.
-export const STAGE_LABELS = {
-  inquiry: "Inquiry",
-  site_visit: "Site Visit",
-  negotiation: "Negotiation",
-  booking: "Booking",
-  documentation: "Documentation",
-  payment: "Payment",
-  closed_won: "Closed Won",
-  closed_lost: "Closed Lost",
-  on_hold: "On Hold",
-};
+import { STAGE_LABEL, STAGE_TRANSITIONS as FLOW_TRANSITIONS } from "../../lib/dealStages";
+
+export const STAGE_LABELS = STAGE_LABEL;
 export const STAGE_VALUES = Object.fromEntries(
   Object.entries(STAGE_LABELS).map(([value, label]) => [label, value])
 );
-export const STAGE_TRANSITIONS = {
-  inquiry: ["site_visit", "on_hold", "closed_lost"],
-  site_visit: ["negotiation", "on_hold", "closed_lost"],
-  negotiation: ["booking", "on_hold", "closed_lost"],
-  booking: ["documentation", "on_hold", "closed_lost"],
-  documentation: ["payment", "on_hold", "closed_lost"],
-  payment: ["closed_won", "on_hold", "closed_lost"],
-  on_hold: ["inquiry", "site_visit", "negotiation", "booking", "documentation", "payment", "closed_lost"],
-  closed_won: [],
-  closed_lost: [],
-};
+export const STAGE_TRANSITIONS = FLOW_TRANSITIONS;
 
 const normalizeDeal = (d) =>
   d

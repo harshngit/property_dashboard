@@ -15,7 +15,7 @@ import DetailedReports from "./DetailedReports";
 const REPORTS = [
   { icon: LuHandshake, title: "Lead Source & Status", desc: "New, contacted, qualified, won and lost leads.", report: "leads" },
   { icon: LuUsers, title: "Broker Performance", desc: "Leads handled, conversion and commission by broker.", report: "brokers" },
-  { icon: LuBuilding2, title: "Property Conversion", desc: "Inquiry-to-visit and visit-to-booking rates.", report: "conversion" },
+  { icon: LuBuilding2, title: "Property Conversion", desc: "Lead-to-visit and visit-to-legal rates.", report: "conversion" },
   { icon: LuWallet, title: "Revenue & Commission", desc: "Collections, milestones and commission payouts.", report: "revenue" },
   { icon: LuMessageCircle, title: "WhatsApp Activity", desc: "Template sends, delivery and response rates.", note: "Available once the WhatsApp integration is live." },
   { icon: LuSparkles, title: "AI Qualification Review", desc: "Scoring accuracy and manual override trends.", link: "/app/ai" },

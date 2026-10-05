@@ -19,6 +19,8 @@ import {
 import { fetchUsers } from "../../redux/slices/usersSlice";
 import useAuth from "../../hooks/useAuth";
 import LeadInsightPanels from "./LeadInsightPanels";
+import AssignmentPanel from "../../components/assignment/AssignmentPanel";
+import LeadSourcesCard from "../../components/assignment/LeadSourcesCard";
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "hot", "warm", "cold", "won", "lost"];
 
@@ -315,6 +317,8 @@ export default function LeadDetail() {
             )}
           </div>
 
+          <AssignmentPanel leadId={id} />
+          <LeadSourcesCard leadId={id} />
           <LeadInsightPanels lead={lead} role={role} />
         </div>
       </div>

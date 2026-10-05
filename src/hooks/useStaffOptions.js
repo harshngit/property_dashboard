@@ -9,6 +9,7 @@ export default function useStaffOptions(roles = ["internal_sales", "admin", "sup
   const key = roles.join(",");
 
   useEffect(() => {
+    if (!key) return undefined;
     let cancelled = false;
     Promise.all(
       key.split(",").map((role) =>

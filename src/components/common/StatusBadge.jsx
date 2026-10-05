@@ -5,6 +5,8 @@ const MAP = {
   "pending approval": "badge-pending", new: "badge-cold",
   contacted: "badge-warm", "site visit": "badge-warm",
   negotiation: "badge-warm", documentation: "badge-cold",
+  lead: "badge-cold", requirement: "badge-cold", match: "badge-warm", "legal coordination": "badge-warm",
+  "loan referral": "badge-warm", "insurance referral": "badge-warm", "payment confirmation": "badge-pending",
   // payments / documents / reviews
   success: "badge-won", paid: "badge-won", approved: "badge-won", verified: "badge-won",
   published: "badge-won", completed: "badge-won", closure: "badge-won", converted: "badge-won",

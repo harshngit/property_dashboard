@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LuCircleCheck, LuCircle, LuClock, LuHeartPulse, LuRefreshCw, LuCircleAlert } from "react-icons/lu";
 import Modal from "../common/Modal";
-import { TextField, TextareaField } from "../common/FormField";
+import { SelectField, TextField, TextareaField } from "../common/FormField";
 import { useToast } from "../common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
@@ -16,9 +16,12 @@ import { INVOICE_KIND, InvoiceStatus, PdfButton } from "./invoices";
 
 const STAFF = ["internal_sales", "admin", "super_admin"];
 const ADMIN = ["admin", "super_admin"];
-const LABEL = { inquiry: "Enquiry", site_visit: "Site visit", negotiation: "Negotiation", booking: "Booking", documentation: "Documentation", payment: "Payment", closed_won: "Closed" };
+import { STAGE_LABEL as LABEL } from "../../lib/dealStages";
+const LOAN = [["pending", "Pending"], ["not_needed", "Not needed (cash / own funds)"], ["referred", "Referred to lender"], ["sanctioned", "Sanctioned"], ["disbursed", "Disbursed"]];
+const INSURANCE = [["pending", "Pending"], ["not_needed", "Not needed"], ["referred", "Referred to insurer"], ["issued", "Policy issued"]];
+const label = (list, v) => (list.find(([k]) => k === v) || [v, v])[1];
 const BAND = { healthy: "bg-emerald-50 text-emerald-700", at_risk: "bg-amber-50 text-amber-700", critical: "bg-red-50 text-red-700" };
-const EVENT = { auto_advance: "Auto-advanced", override: "Override", sla_alert: "SLA alert", invoice: "Invoice", invoice_overdue: "Invoice overdue", blocked: "Blocked", milestone: "Milestone" };
+const EVENT = { auto_advance: "Auto-advanced", override: "Override", sla_alert: "SLA alert", invoice: "Invoice", invoice_overdue: "Invoice overdue", blocked: "Blocked", milestone: "Milestone", referrals: "Referrals updated" };
 
 export default function OrchestrationPanel({ dealId, onChange }) {
   const { role } = useAuth();
@@ -117,6 +120,30 @@ export default function OrchestrationPanel({ dealId, onChange }) {
         </div>
       )}
 
+      {/* Legal coordination, loan and insurance referrals (referral-only) */}
+      {o.referrals && o.stage !== "closed_lost" && (
+        <div className="flex flex-wrap items-start justify-between gap-3 border-t border-line pt-4">
+          <div className="grid gap-x-6 gap-y-1 text-sm text-ink-700 sm:grid-cols-3">
+            <p>Legal: <b>{o.referrals.legalAdvocate || "advocate not recorded"}</b></p>
+            <p>Loan: <b>{label(LOAN, o.referrals.loanStatus)}</b>{o.referrals.loanLender ? ` · ${o.referrals.loanLender}` : ""}</p>
+            <p>Insurance: <b>{label(INSURANCE, o.referrals.insuranceStatus)}</b>{o.referrals.insuranceProvider ? ` · ${o.referrals.insuranceProvider}` : ""}</p>
+          </div>
+          <button
+            className="btn-outline btn-sm"
+            onClick={() => {
+              setForm({
+                legalAdvocate: o.referrals.legalAdvocate || "", legalNotes: o.referrals.legalNotes || "",
+                loanStatus: o.referrals.loanStatus, loanLender: o.referrals.loanLender || "",
+                insuranceStatus: o.referrals.insuranceStatus, insuranceProvider: o.referrals.insuranceProvider || "",
+              });
+              setModal("referrals");
+            }}
+          >
+            Update legal / loan / insurance
+          </button>
+        </div>
+      )}
+
       {/* Execution dates + invoices */}
       <div className="border-t border-line pt-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -193,6 +220,23 @@ export default function OrchestrationPanel({ dealId, onChange }) {
           </ul>
         </details>
       )}
+
+      <Modal open={modal === "referrals"} onClose={() => setModal(null)} title="Legal, loan and insurance" description="A R Buildwel refers and coordinates only - advocates, lenders and insurers are engaged by the client. 'Not needed' lets the deal move on.">
+        <div className="space-y-3">
+          <TextField label="Advocate coordinating legal" value={form.legalAdvocate || ""} onChange={set("legalAdvocate")} />
+          <TextareaField label="Legal notes" rows={2} value={form.legalNotes || ""} onChange={set("legalNotes")} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField label="Home loan" value={form.loanStatus || "pending"} onChange={set("loanStatus")} options={LOAN.map(([value, l]) => ({ value, label: l }))} />
+            <TextField label="Lender" value={form.loanLender || ""} onChange={set("loanLender")} />
+            <SelectField label="Property insurance" value={form.insuranceStatus || "pending"} onChange={set("insuranceStatus")} options={INSURANCE.map(([value, l]) => ({ value, label: l }))} />
+            <TextField label="Insurer" value={form.insuranceProvider || ""} onChange={set("insuranceProvider")} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button className="btn-outline" onClick={() => setModal(null)}>Cancel</button>
+            <button className="btn-primary" disabled={busy} onClick={() => run(() => call(`/orchestration/deals/${dealId}/referrals`, { method: "PUT", body: form }), "Saved.")}>Save</button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={modal === "dates"} onClose={() => setModal(null)} title="Record execution dates" description="Recording a date raises the matching professional-fee invoice to the buyer (net 7 days).">
         <div className="space-y-4">

@@ -12,7 +12,7 @@ import { formatINR, titleCase } from "../../lib/format";
 // demand trends vs supply per locality, deals at risk (Module 40 health
 // score) and recommended next actions.
 
-const LABEL = { inquiry: "Enquiry", site_visit: "Site visit", negotiation: "Negotiation", booking: "Booking", documentation: "Documentation", payment: "Payment", closed_won: "Closed" };
+import { STAGE_LABEL as LABEL } from "../../lib/dealStages";
 const BAND = { at_risk: "bg-amber-50 text-amber-700", critical: "bg-red-50 text-red-700" };
 const PRIORITY = { high: "border-red-200 bg-red-50/50", medium: "border-amber-200 bg-amber-50/40", low: "border-line bg-white" };
 

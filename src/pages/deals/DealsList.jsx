@@ -158,7 +158,7 @@ export default function DealsList() {
       <PageHeader
         eyebrow="Deal Pipeline"
         title="Deals"
-        subtitle="Track every deal from inquiry through documentation to close."
+        subtitle="Lead → Requirement → Match → Site Visit → Negotiation → Legal → Loan → Insurance → Payment → Closure."
       />
 
       <DataTable

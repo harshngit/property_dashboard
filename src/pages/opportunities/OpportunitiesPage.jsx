@@ -258,7 +258,7 @@ function IntakeQueue() {
 
   const uploadNotice = async () => {
     const file = noticeRef.current?.files?.[0];
-    if (!file) return toast.push("Choose a PDF or text file.", "error");
+    if (!file) return toast.push("Choose a PDF, a scan / photo of the notice, or a text file.", "error");
     setUploading(true);
     try {
       const form = new FormData();
@@ -266,7 +266,9 @@ function IntakeQueue() {
       Object.entries(notice).forEach(([k, v]) => v !== "" && form.append(k, String(v)));
       const res = await apiRequest("/crawlers/parse-notice", { method: "POST", body: form, isFormData: true, token });
       const p = res.data.parsed || {};
-      toast.push(`Parsed${p.parsed_by_ai ? " (with AI)" : ""}: ${p.reserve_price ? formatINR(p.reserve_price) : "no reserve price"}, auction ${p.auction_date || "date not found"} - queued for review.`, "success");
+      const reader = res.data.reader || {};
+      const how = reader.method === "tesseract" ? ` (OCR, ${reader.ocrPages} page${reader.ocrPages === 1 ? "" : "s"}${reader.confidence ? `, ${reader.confidence}% confidence` : ""})` : reader.method === "ai_vision" ? " (read by AI vision)" : "";
+      toast.push(`Parsed${how}${p.parsed_by_ai ? " (with AI)" : ""}: ${p.reserve_price ? formatINR(p.reserve_price) : "no reserve price"}, auction ${p.auction_date || "date not found"} - queued for review.`, "success");
       setNoticeOpen(false);
       reload();
     } catch (err) {
@@ -345,7 +347,7 @@ function IntakeQueue() {
         </div>
         <div className="flex gap-2">
           <button className="btn-outline btn-sm" onClick={() => setNoticeOpen(true)}>
-            <LuUpload className="h-3.5 w-3.5" /> Upload notice (PDF)
+            <LuUpload className="h-3.5 w-3.5" /> Upload notice (PDF / scan)
           </button>
           <label className="btn-outline btn-sm cursor-pointer">
             {uploading ? <InlineSpinner /> : <LuUpload className="h-3.5 w-3.5" />} Upload auction CSV
@@ -456,7 +458,7 @@ function IntakeQueue() {
           </div>
         )}
       </Modal>
-      <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} title="Upload an auction / sale notice" description="PDF or text - read by the same parser as the crawlers (regex, plus AI when configured) and queued for review.">
+      <Modal open={noticeOpen} onClose={() => setNoticeOpen(false)} title="Upload an auction / sale notice" description="PDF (text or scanned), a photo / scan of a newspaper cutting, or text - scans are read by OCR, then parsed like crawled notices (regex, plus AI when configured) and queued for review.">
         <div className="space-y-3 text-sm">
           <label className="block"><span className="field-label">Source</span><input className="field-input" placeholder="e.g. Hindustan Times - public notice, 12 Oct" value={notice.sourceName} onChange={(e) => setNotice((x) => ({ ...x, sourceName: e.target.value }))} /></label>
           <label className="block"><span className="field-label">Category</span>
@@ -466,7 +468,7 @@ function IntakeQueue() {
             </select>
           </label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={notice.legalReview} onChange={(e) => setNotice((x) => ({ ...x, legalReview: e.target.checked }))} /> Needs lawyer-panel review (newspaper / legal notice)</label>
-          <input ref={noticeRef} type="file" accept=".pdf,.txt,application/pdf,text/plain" className="block w-full" />
+          <input ref={noticeRef} type="file" accept=".pdf,.txt,.jpg,.jpeg,.png,.webp,application/pdf,text/plain,image/*" className="block w-full" />
           <div className="flex justify-end gap-2">
             <button className="btn-outline" onClick={() => setNoticeOpen(false)}>Cancel</button>
             <button className="btn-primary" disabled={uploading} onClick={uploadNotice}>{uploading ? "Parsing…" : "Parse & queue"}</button>
