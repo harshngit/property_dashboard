@@ -18,6 +18,7 @@ import {
 } from "../../redux/slices/customersSlice";
 import { fetchLeads } from "../../redux/slices/leadsSlice";
 import CustomerPortalPanels from "./CustomerPortalPanels";
+import Customer360Card from "../leads/Customer360Card";
 
 const EDIT_FIELDS = [
   { key: "fullName", label: "Full name", placeholder: "e.g. Karan Mehta" },
@@ -227,6 +228,7 @@ export default function CustomerDetail() {
 
         {/* Right — leads & documents */}
         <div className="space-y-5 lg:col-span-3">
+          <Customer360Card customerId={id} />
           <div className="card p-5">
             <h4 className="text-xs font-bold uppercase tracking-wide text-ink-500">Leads ({linkedLeads.length})</h4>
             {linkedLeads.length ? (

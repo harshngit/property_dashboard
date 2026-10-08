@@ -23,6 +23,8 @@ import {
 } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import TasksDueWidget from "./TasksDueWidget";
+import SponsoredBanner from "../../components/ads/SponsoredBanner";
+import { useApiQuery } from "../../hooks/useApi";
 import { usePageTitle } from "../../context/PageTitleContext";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import {
@@ -121,8 +123,14 @@ export default function Dashboard() {
   const leadsByStatus = useMemo(() => dashboard?.leadsByStatus || {}, [dashboard]);
   const totalLeads = useMemo(() => Object.values(leadsByStatus).reduce((sum, n) => sum + n, 0), [leadsByStatus]);
 
+  // Admins see the whole platform; an agency admin their agency; everyone else their own work.
+  const scope = dashboard?.scope || "mine";
+  const leadsLabel = scope === "all" ? "All Leads" : scope === "agency" ? "Agency Leads" : "My Leads";
+  const attention = useApiQuery("/enquiries/attention");
+  const waiting = (attention.data?.items || []).filter((i) => i.count > 0);
+
   const stats = [
-    { label: "My Leads", value: totalLeads, icon: LuBox, tone: "blue", to: "/app/leads" },
+    { label: leadsLabel, value: totalLeads, icon: LuBox, tone: "blue", to: "/app/leads" },
     { label: "Follow-ups Due Today", value: dashboard?.tasksDueToday ?? 0, icon: LuCalendarCheck, tone: "violet", to: "/app/tasks" },
     { label: "Leads Won (This Month)", value: dashboard?.leadsWonThisMonth ?? 0, icon: LuTrophy, tone: "green", to: "/app/leads" },
     { label: "Conversion Rate", value: `${performance?.conversionRate ?? 0}%`, icon: LuPercent, tone: "red", to: "/app/reports" },
@@ -185,6 +193,31 @@ export default function Dashboard() {
           <StatCard key={item.label} icon={item.icon} label={item.label} value={item.value} tone={item.tone} onClick={() => navigate(item.to)} />
         ))}
       </div>
+
+      <SponsoredBanner />
+
+      {/* What is waiting on this person - each tile opens the screen that handles it. */}
+      {attention.data && (
+        <div className="card p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-bold uppercase tracking-wide text-ink-500">Needs your attention</h3>
+            <span className="text-xs text-ink-500">{waiting.length ? `${attention.data.total} item${attention.data.total === 1 ? "" : "s"} waiting` : "Nothing waiting"}</span>
+          </div>
+          {waiting.length === 0 ? (
+            <p className="mt-3 text-sm text-emerald-700">You're all caught up - no enquiries, visit requests or approvals are waiting.</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+              {waiting.map((i) => (
+                <button key={i.key} type="button" onClick={() => navigate(i.to)} className="rounded-xl border border-line bg-white p-3 text-left transition hover:border-red-300 hover:shadow-sm">
+                  <p className="font-display text-2xl font-extrabold text-ink-950">{i.count}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-ink-900">{i.label}</p>
+                  <p className="text-[11px] text-ink-500">{i.hint}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <TasksDueWidget />
 

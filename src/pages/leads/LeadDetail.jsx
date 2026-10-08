@@ -21,6 +21,8 @@ import useAuth from "../../hooks/useAuth";
 import LeadInsightPanels from "./LeadInsightPanels";
 import AssignmentPanel from "../../components/assignment/AssignmentPanel";
 import LeadSourcesCard from "../../components/assignment/LeadSourcesCard";
+import LeadJourneyCard from "./LeadJourneyCard";
+import Customer360Card from "./Customer360Card";
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "hot", "warm", "cold", "won", "lost"];
 
@@ -317,7 +319,9 @@ export default function LeadDetail() {
             )}
           </div>
 
+          <LeadJourneyCard key={lead.status} leadId={id} />
           <AssignmentPanel leadId={id} />
+          <Customer360Card leadId={id} />
           <LeadSourcesCard leadId={id} />
           <LeadInsightPanels lead={lead} role={role} />
         </div>

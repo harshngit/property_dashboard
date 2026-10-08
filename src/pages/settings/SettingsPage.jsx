@@ -1,3 +1,5 @@
+import NotificationPreferences from "./NotificationPreferences";
+import PrivacyCard from "./PrivacyCard";
 import { useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
@@ -32,6 +34,7 @@ const TABS = [
   { key: "password", label: "Password", icon: LuLock },
   { key: "notifications", label: "Notifications", icon: LuBell },
   { key: "verification", label: "Verification", icon: LuBadgeCheck },
+  { key: "privacy", label: "Privacy & data", icon: LuLock },
 ];
 
 const splitName = (fullName = "") => {
@@ -315,25 +318,8 @@ export default function SettingsPage() {
             </form>
           )}
 
-          {activeTab === "notifications" && (
-            <div className="card space-y-2.5 p-6">
-              {[
-                { key: "email", label: "Email alerts for new leads and follow-ups" },
-                { key: "whatsapp", label: "WhatsApp notifications for assigned leads" },
-                { key: "overdue", label: "Overdue follow-up reminders" },
-              ].map((n) => (
-                <label key={n.key} className="flex items-center justify-between rounded-xl border border-line px-4 py-3 text-sm">
-                  {n.label}
-                  <input
-                    type="checkbox"
-                    checked={notifs[n.key]}
-                    onChange={(e) => setNotifs((s) => ({ ...s, [n.key]: e.target.checked }))}
-                    className="h-4 w-4 rounded border-line text-red-500 focus:ring-red-500"
-                  />
-                </label>
-              ))}
-            </div>
-          )}
+          {activeTab === "notifications" && <NotificationPreferences />}
+          {activeTab === "privacy" && <PrivacyCard />}
 
           {activeTab === "verification" && (
             <div className="card space-y-3 p-6">

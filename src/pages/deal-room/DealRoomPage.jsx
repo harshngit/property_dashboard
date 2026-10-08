@@ -19,7 +19,11 @@ import { formatDate, titleCase } from "../../lib/format";
 const DOC_TYPES = [
   ["auction_notice", "Auction notice"], ["sale_notice", "Sale notice"], ["emd_receipt", "EMD details"], ["title_documents", "Title documents"],
   ["valuation_report", "Valuation report"], ["legal_opinion", "Legal opinion"], ["inspection_report", "Inspection report"],
-  ["term_sheet", "Term sheet"], ["financials", "Financials"], ["photos", "Photos"], ["other", "Other"],
+  ["term_sheet", "Term sheet"], ["financials", "Financials"], ["photos", "Photos"],
+  // Institutional due diligence (Engine 7) - these tick the regulatory checklist.
+  ["land_records", "Land records"], ["noc", "NOC"], ["fire_noc", "Fire NOC"], ["municipal_approval", "Municipal approval"], ["encumbrance_certificate", "Encumbrance certificate"],
+  ["audited_financials", "Audited financials"], ["affiliation_certificate", "Affiliation certificate"], ["trust_deed", "Trust deed"], ["enrollment_records", "Enrollment records"],
+  ["regulatory_approval", "Regulatory approval"], ["other", "Other"],
 ];
 const ADMIN_ROLES = ["admin", "super_admin"];
 

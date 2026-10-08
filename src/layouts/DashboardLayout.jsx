@@ -15,6 +15,7 @@ import Avatar from "../components/common/Avatar";
 import PageLoader from "../components/common/PageLoader";
 import GlobalSearch from "../components/common/GlobalSearch";
 import NotificationBell from "../components/common/NotificationBell";
+import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import { PageTitleProvider, usePageTitle } from "../context/PageTitleContext";
 
 function BrandMark({ collapsed }) {
@@ -208,6 +209,7 @@ function DashboardShell() {
                 </Transition>
               </Menu>
 
+              <LanguageSwitcher />
               <button onClick={() => navigate("/app/settings")} className="rounded-lg p-2 text-ink-700 hover:bg-surface-sunk" title="Settings">
                 <LuSettings className="h-5 w-5" />
               </button>

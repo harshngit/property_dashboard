@@ -530,7 +530,8 @@ function DealRooms() {
 export default function OpportunitiesPage() {
   const { role } = useAuth();
   const isAdmin = ADMIN_ROLES.includes(role);
-  const [tab, setTab] = useState("pipeline");
+  // Deep links from the dashboard: /app/opportunities?tab=rooms (deal-room approvals), ?tab=intake.
+  const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get("tab") || "pipeline");
   const { data: summary } = useApiQuery("/opportunities/summary");
 
   const stats = useMemo(() => {

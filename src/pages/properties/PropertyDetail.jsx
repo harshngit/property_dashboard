@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useApiQuery } from "../../hooks/useApi";
 import { useDispatch, useSelector } from "react-redux";
 import {
   LuArrowLeft, LuPencil, LuMapPin, LuLayers, LuBuilding, LuCircleCheck, LuCircleX, LuIndianRupee,
@@ -171,12 +172,46 @@ function AccordionItem({ question, answer }) {
   );
 }
 
+// Customer reviews written about this listing (A R staff only) - any
+// status, so a review held for approval is visible here too.
+function PropertyReviewsCard({ propertyId }) {
+  const { data } = useApiQuery(`/trust/reviews?propertyId=${propertyId}&limit=5`);
+  const rows = data?.items || [];
+  const total = data?.pagination?.total || 0;
+  const label = { published: "Published", pending_moderation: "Waiting for approval", hidden: "Hidden", rejected: "Rejected" };
+  return (
+    <div className="card mb-5 p-6">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="font-display text-base font-bold text-ink-950">Customer reviews ({total})</h3>
+        <Link to={`/app/reviews?propertyId=${propertyId}`} className="text-sm font-semibold text-red-600">Manage reviews</Link>
+      </div>
+      {!rows.length ? (
+        <p className="text-sm text-ink-500">No reviews for this property yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((r) => (
+            <div key={r.id} className="rounded-xl border border-line p-3 text-sm">
+              <p className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-amber-600">{r.rating} / 5</span>
+                <span className="font-semibold text-ink-900">{r.title || "Review"}</span>
+                <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold text-ink-700">{label[r.status] || r.status}</span>
+              </p>
+              <p className="mt-1 text-xs text-ink-500" data-no-translate>{r.reviewerName} → {r.subjectName}</p>
+              {r.body && <p className="mt-1 text-ink-800" data-no-translate>{r.body}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PropertyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const toast = useToast();
-  const { permissions } = useAuth();
+  const { permissions, role } = useAuth();
 
   const { current: property, status } = useSelector((s) => s.properties);
   const { list: leads } = useSelector((s) => s.leads);
@@ -595,6 +630,8 @@ export default function PropertyDetail() {
           </div>
         )}
       </div>
+
+      {["internal_sales", "admin", "super_admin"].includes(role) && <PropertyReviewsCard propertyId={id} />}
 
       {property.faqs?.length > 0 && (
         <div className="card p-6">

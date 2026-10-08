@@ -51,7 +51,7 @@ export default function PropertiesList() {
 
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState(() => new URLSearchParams(window.location.search).get("status") || "All");
   const [txnFilter, setTxnFilter] = useState("All");
   const [badgeFilter, setBadgeFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");

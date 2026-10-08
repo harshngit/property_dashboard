@@ -33,6 +33,7 @@ const normalizeProperty = (p) => ({
 });
 
 const normalizeDashboard = (d) => ({
+  scope: d.scope || "mine",
   leadsByStatus: d.leadsByStatus || {},
   tasksDueToday: d.tasksDueToday || 0,
   overdueTasksCount: d.overdueTasksCount || 0,

@@ -1,3 +1,4 @@
+import TestimonialsTab from "./TestimonialsTab";
 import { useState } from "react";
 import { LuPlus, LuPencil, LuTrash2, LuExternalLink, LuX } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
@@ -225,21 +226,26 @@ export default function ContentPage() {
       <PageHeader eyebrow="Website" title="Content" subtitle="Blog & guide articles and SEO city pages shown on the website." />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex gap-1 rounded-lg bg-surface-muted p-1">
-          {[["articles", "Articles"], ["city", "City pages"]].map(([k, l]) => (
+          {[["articles", "Articles"], ["city", "City pages"], ["testimonials", "Testimonials"]].map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} className={`rounded-md px-4 py-1.5 text-xs font-semibold ${tab === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>
           ))}
         </div>
-        <select className="field-select h-9 w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
-        </select>
-        {tab === "articles" && <input className="field-input h-9 w-56" placeholder="Search title" value={search} onChange={(e) => setSearch(e.target.value)} />}
-        <button className="btn-primary btn-sm ml-auto" onClick={() => setEditing({})}>
-          <LuPlus className="h-4 w-4" /> {tab === "articles" ? "New article" : "New city page"}
-        </button>
+        {tab !== "testimonials" && (
+          <>
+            <select className="field-select h-9 w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">All statuses</option>
+              {STATUSES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
+            </select>
+            {tab === "articles" && <input className="field-input h-9 w-56" placeholder="Search title" value={search} onChange={(e) => setSearch(e.target.value)} />}
+            <button className="btn-primary btn-sm ml-auto" onClick={() => setEditing({})}>
+              <LuPlus className="h-4 w-4" /> {tab === "articles" ? "New article" : "New city page"}
+            </button>
+          </>
+        )}
       </div>
 
-      <div className="card overflow-x-auto">
+      {tab === "testimonials" && <TestimonialsTab />}
+      <div className={`card overflow-x-auto ${tab === "testimonials" ? "hidden" : ""}`}>
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-500">
             <tr>

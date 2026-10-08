@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import LanguageSwitcher from "../components/common/LanguageSwitcher";
 
 export default function AuthLayout({ children, panelTitle, panelSubtitle, panelEyebrow = "Real estate CRM" }) {
   return (
@@ -35,7 +36,10 @@ export default function AuthLayout({ children, panelTitle, panelSubtitle, panelE
           </div>
         </div>
 
-        <div className="flex w-full items-center justify-center bg-white px-4 py-5 sm:px-5 sm:py-5 lg:w-[54%] lg:px-7 xl:px-8">
+        <div className="relative flex w-full items-center justify-center bg-white px-4 pb-5 pt-16 sm:px-5 lg:w-[54%] lg:px-7 xl:px-8">
+          <div className="absolute right-4 top-4 sm:right-6 sm:top-5">
+            <LanguageSwitcher account={false} />
+          </div>
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

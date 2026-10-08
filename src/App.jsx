@@ -47,18 +47,30 @@ import BusinessLeadsPage from "./pages/business-leads/BusinessLeadsPage";
 import WorkspacePage from "./pages/workspace/WorkspacePage";
 import MatchingPage from "./pages/matching/MatchingPage";
 import TrustPage from "./pages/trust/TrustPage";
+import ReviewsPage from "./pages/reviews/ReviewsPage";
 import FraudPage from "./pages/fraud/FraudPage";
 import DisputesPage from "./pages/disputes/DisputesPage";
 import InvoicesPage from "./pages/invoices/InvoicesPage";
 import MandatesPage from "./pages/mandates/MandatesPage";
 import RepresentativesPage from "./pages/representatives/RepresentativesPage";
 import LeadSourcesPage from "./pages/lead-sources/LeadSourcesPage";
+import EnquiriesPage from "./pages/enquiries/EnquiriesPage";
+import InstitutionalPage from "./pages/institutional/InstitutionalPage";
+import AdvertisingPage from "./pages/advertising/AdvertisingPage";
+import RewardsPage from "./pages/rewards/RewardsPage";
+import LanguagesPage from "./pages/languages/LanguagesPage";
+import CompliancePage from "./pages/compliance/CompliancePage";
+import MessagesPage from "./pages/messages/MessagesPage";
+import DeveloperPage from "./pages/developer/DeveloperPage";
+import ExchangePage from "./pages/exchange/ExchangePage";
+import FieldNetworkPage from "./pages/wfh/FieldNetworkPage";
+import TemplatesPage from "./pages/templates/TemplatesPage";
 import IntelligencePage from "./pages/intelligence/IntelligencePage";
 import ReputationPage from "./pages/reputation/ReputationPage";
 import { MODULES } from "./config/roles";
 
 // Customers (investors) land in their workspace, everyone else on the dashboard.
-const homeFor = (role) => (role === "customer" ? "/app/workspace" : "/app/dashboard");
+const homeFor = (role) => (role === "customer" ? "/app/workspace" : role === "advertiser" ? "/app/advertising" : "/app/dashboard");
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -94,6 +106,50 @@ export default function App() {
             <Route path="leads/new" element={<LeadCreate />} />
             <Route path="leads/:id" element={<LeadDetail />} />
             <Route path="leads/:id/edit" element={<LeadEdit />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.INSTITUTIONAL} />}>
+            <Route path="institutional" element={<InstitutionalPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.REWARDS} />}>
+            <Route path="rewards" element={<RewardsPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.MESSAGES} />}>
+            <Route path="messages" element={<MessagesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.TEMPLATES} />}>
+            <Route path="templates" element={<TemplatesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.FIELD_NETWORK} />}>
+            <Route path="field-network" element={<FieldNetworkPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.EXCHANGE} />}>
+            <Route path="exchange" element={<ExchangePage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.DEVELOPER} />}>
+            <Route path="developer" element={<DeveloperPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.COMPLIANCE} />}>
+            <Route path="compliance" element={<CompliancePage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.LANGUAGES} />}>
+            <Route path="languages" element={<LanguagesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.ADVERTISING} />}>
+            <Route path="advertising" element={<AdvertisingPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.ENQUIRIES} />}>
+            <Route path="enquiries" element={<EnquiriesPage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.PROPERTIES} />}>
@@ -196,6 +252,10 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.TRUST} />}>
             <Route path="trust" element={<TrustPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.REVIEWS} />}>
+            <Route path="reviews" element={<ReviewsPage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.MATCHING} />}>
