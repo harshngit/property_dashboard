@@ -77,6 +77,15 @@ export default function NotificationPreferences() {
     }
   };
   const quietInvalid = !!f.quietStart !== !!f.quietEnd;
+  // Per type: mute, how often, and on which channels (Module 43).
+  const saveCategory = async (key, patch) => {
+    try {
+      await call("/notifications/preferences", { method: "PUT", body: { categories: { [key]: patch } } });
+      prefs.reload();
+    } catch (err) {
+      toast.push(err.message, "error");
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -115,6 +124,44 @@ export default function NotificationPreferences() {
       </div>
 
       <div className="card space-y-3 p-6">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-ink-500">By type: how often and where</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500">
+              <tr>
+                <th className="py-2 pr-3">Type</th>
+                <th className="py-2 pr-3">Receive</th>
+                <th className="py-2 pr-3">How often</th>
+                {(prefs.data.channels || []).map((ch) => <th key={ch.key} className="py-2 pr-3">{ch.label}</th>)}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {(prefs.data.categories || []).map((c) => (
+                <tr key={c.key} className={c.muted ? "text-ink-400" : ""}>
+                  <td className="py-2.5 pr-3 font-semibold">{c.label}</td>
+                  <td className="py-2.5 pr-3"><input id={`pref-cat-${c.key}`} type="checkbox" className="h-4 w-4 accent-red-600" checked={!c.muted} onChange={(e) => saveCategory(c.key, { muted: !e.target.checked })} /></td>
+                  <td className="py-2.5 pr-3">
+                    <select id={`pref-freq-${c.key}`} className="field-select !py-1.5 text-xs" disabled={c.muted} value={c.frequency} onChange={(e) => saveCategory(c.key, { frequency: e.target.value })}>
+                      {(prefs.data.frequencies || []).map((fr) => <option key={fr.key} value={fr.key}>{fr.label}</option>)}
+                    </select>
+                  </td>
+                  {(prefs.data.channels || []).map((ch) => (
+                    <td key={ch.key} className="py-2.5 pr-3">
+                      <input id={`pref-${c.key}-${ch.key}`} type="checkbox" className="h-4 w-4 accent-red-600" disabled={c.muted} checked={!!c.channels[ch.key]} onChange={(e) => saveCategory(c.key, { channels: { [ch.key]: e.target.checked } })} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-ink-500">
+          {prefs.data.alwaysInstant} A muted type still appears in the Notification Centre.
+          {(prefs.data.channels || []).some((ch) => !ch.available) ? ` Not switched on for this installation yet: ${prefs.data.channels.filter((ch) => !ch.available).map((ch) => ch.label).join(", ")}.` : ""}
+        </p>
+      </div>
+
+      <div className="card space-y-3 p-6">
         <h3 className="text-sm font-bold uppercase tracking-wide text-ink-500">Quiet hours</h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block text-xs font-semibold text-ink-600">From<input id="pref-quiet-start" type="time" className="field-input mt-1" value={f.quietStart} onChange={(e) => setF({ ...f, quietStart: e.target.value })} /></label>
@@ -124,7 +171,7 @@ export default function NotificationPreferences() {
         <div className="flex flex-wrap items-center gap-3">
           <button className="btn-primary btn-sm" disabled={quietInvalid} onClick={() => save(f).then(() => toast.push("Quiet hours saved.", "success"))}>Save quiet hours</button>
           {(f.quietStart || f.quietEnd) && <button className="btn-outline btn-sm" onClick={() => save({ ...f, quietStart: "", quietEnd: "" })}>Clear</button>}
-          <span className="text-xs text-ink-500">{quietInvalid ? "Set both times, or clear both." : "No push is sent between these times; it waits in the bell."}</span>
+          <span className="text-xs text-ink-500">{quietInvalid ? "Set both times, or clear both." : "Nothing is sent between these times except critical alerts; the rest goes out together when quiet hours end."}</span>
         </div>
       </div>
     </div>

@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react";
+import DynamicFields, { toPayload } from "../../components/fields/DynamicFields";
+import { CoreFieldsProvider } from "../../components/fields/CoreFields";
+
+const CORE_LABELS = {"Customer": "customerId", "Source": "source", "Interested property (optional)": "propertyId", "Assign to (optional)": "assignedTo"};
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { LuSave, LuX, LuUserPlus } from "react-icons/lu";
@@ -49,6 +53,7 @@ export default function LeadForm({ mode = "create", lead }) {
   const [newCustomer, setNewCustomer] = useState({ fullName: "", email: "", mobile: "" });
   const [requirement, setRequirement] = useState(emptyRequirement);
   const [errors, setErrors] = useState({});
+  const [custom, setCustom] = useState(lead?.customFields || {});
   const [saving, setSaving] = useState(false);
 
   const activeCustomerId = mode === "create" ? customerId : lead?.customerId;
@@ -141,8 +146,8 @@ export default function LeadForm({ mode = "create", lead }) {
     setSaving(true);
 
     const res = mode === "create"
-      ? await dispatch(createLead({ customerId, source, propertyId: propertyId || undefined, assignedTo: assignedTo || undefined }))
-      : await dispatch(updateLead({ id: lead.id, source, propertyId: propertyId || null }));
+      ? await dispatch(createLead({ customerId, source, propertyId: propertyId || undefined, assignedTo: assignedTo || undefined, customFields: toPayload(custom) }))
+      : await dispatch(updateLead({ id: lead.id, source, propertyId: propertyId || null, customFields: toPayload(custom) }));
 
     const success = mode === "create" ? createLead.fulfilled.match(res) : updateLead.fulfilled.match(res);
 
@@ -180,6 +185,7 @@ export default function LeadForm({ mode = "create", lead }) {
           ? "Link an inquiry to a customer so AI qualification and matching can kick in."
           : "Only the source and interested property can be changed here — use Reassign or the status dropdown for those."}
       />
+      <CoreFieldsProvider entityType="crm_lead" labels={CORE_LABELS}>
       <form onSubmit={submit} className="card space-y-6 p-6">
         {mode === "create" && (
           <div>
@@ -254,6 +260,8 @@ export default function LeadForm({ mode = "create", lead }) {
           )}
         </div>
 
+        <DynamicFields entityType="crm_lead" core={{ source }} values={custom} onChange={setCustom} />
+
         <div className="flex justify-end gap-3 border-t border-line pt-5">
           <button type="button" onClick={() => navigate("/app/leads")} className="btn-outline">
             <LuX className="h-4 w-4" /> Cancel
@@ -264,6 +272,7 @@ export default function LeadForm({ mode = "create", lead }) {
           </button>
         </div>
       </form>
+      </CoreFieldsProvider>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { CustomFieldList, RecordFields } from "../../components/fields/DynamicFields";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -631,6 +632,19 @@ export default function PropertyDetail() {
         )}
       </div>
 
+      {property.customFieldsMissing?.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Required details are missing, so this listing cannot be approved yet: <b>{property.customFieldsMissing.map((m) => m.label).join(", ")}</b>.{" "}
+          <Link to={`/app/properties/${id}/edit`} className="font-semibold underline">Add them</Link>
+        </div>
+      )}
+      {property.customFieldList?.length > 0 && (
+        <div className="card p-6">
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-ink-500">Additional details</h3>
+          <CustomFieldList list={property.customFieldList} />
+        </div>
+      )}
+      {["internal_sales", "admin", "super_admin"].includes(role) && <RecordFields entityType="due_diligence" entityId={id} city={property.city} title="Due diligence details" />}
       {["internal_sales", "admin", "super_admin"].includes(role) && <PropertyReviewsCard propertyId={id} />}
 
       {property.faqs?.length > 0 && (

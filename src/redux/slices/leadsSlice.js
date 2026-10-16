@@ -5,6 +5,8 @@ const normalizeLead = (l) =>
   l
     ? {
         id: l.id,
+        customFields: l.customFields || {},
+        customFieldList: l.customFieldList || [],
         tenantId: l.tenant_id,
         source: l.source,
         status: l.status,
@@ -75,11 +77,11 @@ export const fetchLeadById = createAsyncThunk(
 
 export const createLead = createAsyncThunk(
   "leads/createLead",
-  async ({ customerId, source, propertyId, assignedTo }, { getState, rejectWithValue }) => {
+  async ({ customerId, source, propertyId, assignedTo, customFields }, { getState, rejectWithValue }) => {
     try {
       const res = await apiRequest("/leads", {
         method: "POST",
-        body: { customerId, source, propertyId: propertyId || undefined, assignedTo: assignedTo || undefined },
+        body: { customerId, source, propertyId: propertyId || undefined, assignedTo: assignedTo || undefined, customFields },
         token: getState().auth.accessToken,
       });
       return normalizeLead(res.data);
@@ -91,11 +93,12 @@ export const createLead = createAsyncThunk(
 
 export const updateLead = createAsyncThunk(
   "leads/updateLead",
-  async ({ id, source, propertyId }, { getState, rejectWithValue }) => {
+  async ({ id, source, propertyId, customFields }, { getState, rejectWithValue }) => {
     try {
       const body = {};
       if (source !== undefined) body.source = source;
       if (propertyId !== undefined) body.propertyId = propertyId || null;
+      if (customFields !== undefined) body.customFields = customFields;
       const res = await apiRequest(`/leads/${id}`, {
         method: "PUT",
         body,

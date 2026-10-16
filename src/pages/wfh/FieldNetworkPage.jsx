@@ -27,6 +27,73 @@ const money = (v) => formatINR(v, { compact: false });
 const Spinner = () => <div className="flex justify-center py-16 text-ink-500"><InlineSpinner className="h-6 w-6" /></div>;
 const TYPE_OPTIONS = [["buyer_visit", "Buyer site visit"], ["seller_photo", "Seller photo permission"], ["requirement_collect", "Requirement collection"], ["listing_assist", "Seller listing assist"], ["condition_report", "Property condition report"], ["auction_check", "Auction property field check"], ["area_survey", "Area demand mini-survey"]];
 
+// Fraud risk score of a submission (Module 47): shown from "medium" upwards.
+function RiskPill({ band, score }) {
+  if (!band || band === "low") return null;
+  return <p className={`mt-1 text-[11px] font-bold ${band === "high" ? "text-red-600" : "text-amber-600"}`}>{band === "high" ? "High" : "Medium"} fraud risk · {score}/100</p>;
+}
+
+const SIGNAL = {
+  phone_repeat: "Same mobile in several tasks", device_changed: "Different device at submission", track_no_track: "No location track", track_short_presence: "Too little time at the property", track_few_samples: "Too few position reports",
+  track_gaps: "Gaps in the location track", track_impossible_speed: "Impossible speed", track_no_gps_jitter: "Position never moved (faked location)", track_mock_location: "Mock location", photo_no_camera: "Photos without camera details",
+  photo_edited: "Edited photo", possible_relative: "Same surname as the field partner", party_is_worker: "Buyer / owner is a field partner", shared_device: "Device shared between accounts", high_rejection: "High rejection rate",
+  new_worker: "New field partner", too_fast: "Submitted within 3 minutes", odd_hours: "Visit between midnight and 5 am", poor_gps_accuracy: "Poor GPS accuracy", ai_review: "Raised by the AI review",
+};
+
+// What the fraud checks found in the last 30 days, which checks are switched on, and the teams.
+function FraudTeams() {
+  const fraud = useApiQuery("/wfh/manage/fraud");
+  const teams = useApiQuery("/wfh/manage/teams");
+  if (!fraud.data || !teams.data) return <Spinner />;
+  const f = fraud.data;
+  const on = (v, yes, no) => <span className={v ? "font-semibold text-emerald-600" : "text-ink-500"}>{v ? yes : no}</span>;
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-4">
+        {[["Held for a decision", f.heldForReview, f.heldForReview ? "text-red-600" : ""], ["High risk, 30 days", f.last30Days.high || 0, ""], ["Medium risk, 30 days", f.last30Days.medium || 0, ""], ["Low risk, 30 days", f.last30Days.low || 0, ""]].map(([label, value, tone]) => (
+          <div key={label} className="card p-4"><p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{label}</p><p className={`mt-1 text-2xl font-extrabold ${tone || "text-ink-950"}`}>{value}</p></div>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card space-y-2 p-5 text-sm">
+          <p className="text-sm font-bold text-ink-900">The checks on every submission</p>
+          <p className="flex justify-between gap-3"><span>GPS within the radius, photo location and time, OTP, phone rules</span>{on(true, "On")}</p>
+          <p className="flex justify-between gap-3"><span>10-minute location track with motion analysis</span>{on(true, "On")}</p>
+          <p className="flex justify-between gap-3"><span>Photo fingerprints (same picture on another task)</span>{on(true, "On")}</p>
+          <p className="flex justify-between gap-3"><span>Reverse image search on the internet</span>{on(f.providers.reverseImageSearch, "On", "Needs the Google Vision key")}</p>
+          <p className="flex justify-between gap-3"><span>AI check for screenshots and map imagery</span>{on(f.providers.aiImageCheck, "On", "Needs the AI key")}</p>
+          <p className="flex justify-between gap-3"><span>Household numbers, Aadhaar, bank account and team cross-check</span>{on(true, "On")}</p>
+          <p className="flex justify-between gap-3"><span>AI second opinion on the fraud risk score</span>{on(f.providers.aiFraudReview, "On", "Needs the AI key")}</p>
+          <p className="text-xs text-ink-500">Thresholds and the option to refuse a visit without a complete location track are under Settings.</p>
+        </div>
+        <div className="card space-y-1.5 p-5 text-sm">
+          <p className="text-sm font-bold text-ink-900">Most frequent warning signs, 30 days</p>
+          {!f.topSignals.length && <p className="text-ink-500">None yet.</p>}
+          {f.topSignals.map((x) => <p key={x.rule} className="flex justify-between gap-3"><span>{SIGNAL[x.rule] || titleCase(x.rule.replace(/_/g, " "))}</span><b>{x.n}</b></p>)}
+        </div>
+      </div>
+      {teams.data.length === 0 ? <EmptyState title="No teams yet" subtitle="Field partners can form a team from their dashboard once their KYC is verified." /> : (
+        <div className="card overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-500"><tr><th className={th}>Team</th><th className={th}>Leader</th><th className={th}>Members</th><th className={th}>Verified this month / in all</th><th className={th}>Warning signs</th></tr></thead>
+            <tbody className="divide-y divide-line">
+              {teams.data.map((t) => (
+                <tr key={t.id} className={t.status === "active" ? "" : "opacity-50"}>
+                  <td className={th} data-no-translate><p className="font-semibold text-ink-900">{t.name}</p><p className="text-xs text-ink-500">{t.code}{t.city ? ` · ${t.city}` : ""}{t.status !== "active" ? " · closed" : ""}</p></td>
+                  <td className={th} data-no-translate>{t.leaderName}</td>
+                  <td className={th}>{t.members}</td>
+                  <td className={th}>{t.verifiedThisMonth} / {t.verifiedTotal}</td>
+                  <td className={`${th} text-xs font-semibold text-red-600`}>{[t.highRiskLast30Days ? `${t.highRiskLast30Days} high-risk submission${t.highRiskLast30Days === 1 ? "" : "s"}` : null, t.sharedDevice ? "Members share a device" : null, t.sharedBankAccount ? "Members share a bank account" : null].filter(Boolean).map((x) => <p key={x}>{x}</p>)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Submissions({ onChanged }) {
   const call = useApiCall();
   const toast = useToast();
@@ -55,7 +122,7 @@ function Submissions({ onChanged }) {
   return (
     <div className="space-y-3">
       <select id="wfh-queue" className="field-select h-9 w-56" value={queue} onChange={(e) => setQueue(e.target.value)}>
-        <option value="pending">Waiting for a decision</option><option value="mine">Assigned to me</option><option value="flagged">Flagged</option><option value="passed">Verified</option><option value="failed">Rejected</option>
+        <option value="pending">Waiting for a decision</option><option value="mine">Assigned to me</option><option value="risk">High fraud risk - held</option><option value="flagged">Flagged</option><option value="passed">Verified</option><option value="failed">Rejected</option>
       </select>
       {loading && !data ? <Spinner /> : rows.length === 0 ? <EmptyState title="Nothing here" subtitle="Submitted tasks appear here once the field partner has entered the buyer's or owner's OTP." /> : (
         <div className="card overflow-x-auto">
@@ -68,7 +135,7 @@ function Submissions({ onChanged }) {
                   <td className={th} data-no-translate>{r.workerName}</td>
                   <td className={`${th} text-xs text-ink-600`}>{r.gpsDistanceM !== null && r.gpsDistanceM !== undefined ? `Checked in ${r.gpsDistanceM} m away` : ""}{r.photos.length ? ` ${r.photos.length} photos` : ""}{r.partyName ? <p data-no-translate>{r.partyName} ••••{r.partyPhoneLast4} {r.otpConfirmed ? "· OTP ✓" : "· OTP pending"}</p> : null}{(r.fraudFlags || []).map((f) => <p key={f.rule} className="font-semibold text-red-600">{f.detail}</p>)}</td>
                   <td className={`${th} text-xs`}>{r.submittedAt ? formatDate(r.submittedAt, true) : "—"}{r.repDueAt && r.verificationStatus === "pending" && <p className={new Date(r.repDueAt) < new Date() ? "font-semibold text-red-600" : "text-ink-500"}>confirm by {formatDate(r.repDueAt, true)}</p>}</td>
-                  <td className={th}><StatusBadge value={r.verificationStatus === "pending" ? "Pending" : titleCase(r.verificationStatus)} />{r.rejectionReason && <p className="mt-0.5 max-w-[200px] text-[11px] text-ink-500">{r.rejectionReason}</p>}</td>
+                  <td className={th}><StatusBadge value={r.verificationStatus === "pending" ? "Pending" : titleCase(r.verificationStatus)} /><RiskPill band={r.riskBand} score={r.riskScore} />{r.rejectionReason && <p className="mt-0.5 max-w-[200px] text-[11px] text-ink-500">{r.rejectionReason}</p>}</td>
                   <td className={`${th} text-right`}><button className="btn-outline btn-sm" onClick={() => { setReason(""); setOpen(r); }}>{r.verificationStatus === "pending" ? "Decide" : "View"}</button></td>
                 </tr>
               ))}
@@ -84,7 +151,15 @@ function Submissions({ onChanged }) {
             {s.partyName && <p className="text-ink-700" data-no-translate>{s.partyName}, mobile ending {s.partyPhoneLast4} - OTP {s.otpConfirmed ? "confirmed" : "not confirmed yet"}</p>}
             {Object.keys(s.evidence || {}).length > 0 && <div className="rounded-lg bg-surface-muted p-3 text-xs">{Object.entries(s.evidence).filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => <p key={k}><b>{titleCase(k.replace(/([A-Z])/g, " $1"))}:</b> <span data-no-translate>{String(v)}</span></p>)}</div>}
             {s.photos.length > 0 && <div className="grid grid-cols-3 gap-2">{s.photos.map((p, i) => <div key={i} className="rounded-lg border border-line p-1 text-[11px] text-ink-600">{p.url ? <img src={p.url} alt="" className="h-28 w-full rounded object-cover" /> : <div className="flex h-28 items-center justify-center rounded bg-surface-muted">Photo {i + 1}</div>}<p className="mt-1">{p.distanceM} m away{p.takenAt ? ` · ${formatDate(p.takenAt, true)}` : ""}</p></div>)}</div>}
-            {(s.fraudFlags || []).length > 0 && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{s.fraudFlags.map((f) => <p key={f.rule}>{f.detail}</p>)}</div>}
+            {s.riskScore !== null && s.riskScore !== undefined ? (
+              <div className={`rounded-lg border p-3 text-xs ${s.riskBand === "high" ? "border-red-200 bg-red-50 text-red-800" : s.riskBand === "medium" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-line bg-surface-muted text-ink-700"}`}>
+                <p className="text-sm font-bold">Fraud risk {s.riskScore}/100{s.riskBand === "high" ? " - held for your decision" : ""}</p>
+                {(s.riskReasons || []).map((r, i) => <p key={`${r.rule}-${i}`} className="mt-0.5 flex justify-between gap-3"><span>{r.detail}</span>{r.points > 0 && <b>+{r.points}</b>}</p>)}
+                {!(s.riskReasons || []).length && <p>No warning signs.</p>}
+                {s.track && <p className="mt-1.5 border-t border-current/20 pt-1.5">Location track: {s.track.samples} position reports, {s.track.minutes} of {s.track.need} minutes at the property{s.track.pathM !== undefined ? `, moved ${s.track.pathM} m` : ""}{s.track.arrived ? ", seen arriving" : ""}.</p>}
+                {s.aiAssessment && <p className="mt-1.5 border-t border-current/20 pt-1.5"><b>AI second opinion ({titleCase(s.aiAssessment.verdict.replace(/_/g, " "))}):</b> <span data-no-translate>{s.aiAssessment.reasoning}</span></p>}
+              </div>
+            ) : (s.fraudFlags || []).length > 0 && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{s.fraudFlags.map((f) => <p key={f.rule}>{f.detail}</p>)}</div>}
             {s.verificationStatus === "pending" && (
               otpPending ? <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Waiting for the field partner to enter the OTP. Nothing can be decided before that.</p> : (
                 <>
@@ -229,7 +304,7 @@ function Workers({ admin, onChanged }) {
             <tbody className="divide-y divide-line">
               {rows.map((w) => (
                 <tr key={w.userId}>
-                  <td className={th} data-no-translate><p className="font-semibold text-ink-900">{w.name}</p><p className="text-xs text-ink-500">{w.mobile || w.email}</p>{w.sharedDevice && <p className="text-[11px] font-semibold text-red-600">Device shared with another field partner</p>}</td>
+                  <td className={th} data-no-translate><p className="font-semibold text-ink-900">{w.name}</p><p className="text-xs text-ink-500">{w.mobile || w.email}</p>{w.sharedDevice && <p className="text-[11px] font-semibold text-red-600">Device shared with another field partner</p>}{w.riskScore >= 30 && <p className={`text-[11px] font-semibold ${w.riskScore >= 60 ? "text-red-600" : "text-amber-600"}`}>Average fraud risk {w.riskScore}/100</p>}<p className="text-[11px] text-ink-500">{w.familyDeclared ? `${w.familyMembers} household number${w.familyMembers === 1 ? "" : "s"} declared` : "Household not declared yet"}{w.teamName ? ` · team ${w.teamName}` : ""}</p></td>
                   <td className={`${th} text-xs`} data-no-translate>{[w.locality, w.city].filter(Boolean).join(", ") || "—"}</td>
                   <td className={`${th} text-xs`}><StatusBadge value={titleCase(w.kycStatus)} /><p className="mt-0.5 text-ink-500" data-no-translate>Aadhaar ••••{w.aadhaarLast4} · a/c ••••{w.bankAccountLast4}{w.hasPan ? " · PAN on file" : " · no PAN"}</p></td>
                   <td className={th}>{w.verifiedTasks}</td>
@@ -405,12 +480,13 @@ export default function FieldNetworkPage() {
         </div>
       )}
       <div className="flex gap-1 overflow-x-auto rounded-lg bg-surface-muted p-1 sm:w-fit">
-        {[["submissions", `To confirm${s?.to_review ? ` (${s.to_review})` : ""}`], ["tasks", "Tasks"], ["workers", `Field partners${s?.kyc_pending ? ` (${s.kyc_pending})` : ""}`], ["payouts", `Payouts${s?.payoutsPending ? ` (${s.payoutsPending})` : ""}`], ["settings", "Settings"]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`shrink-0 rounded-md px-4 py-1.5 text-xs font-semibold ${tab === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>)}
+        {[["submissions", `To confirm${s?.to_review ? ` (${s.to_review})` : ""}`], ["tasks", "Tasks"], ["workers", `Field partners${s?.kyc_pending ? ` (${s.kyc_pending})` : ""}`], ["payouts", `Payouts${s?.payoutsPending ? ` (${s.payoutsPending})` : ""}`], ["fraud", `Fraud checks and teams${s?.high_risk ? ` (${s.high_risk})` : ""}`], ["settings", "Settings"]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`shrink-0 rounded-md px-4 py-1.5 text-xs font-semibold ${tab === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>)}
       </div>
       {tab === "submissions" && <Submissions onChanged={summary.reload} />}
       {tab === "tasks" && <Tasks onChanged={summary.reload} />}
       {tab === "workers" && <Workers admin={admin} onChanged={summary.reload} />}
       {tab === "payouts" && <Payouts admin={admin} summary={s} onChanged={summary.reload} />}
+      {tab === "fraud" && <FraudTeams />}
       {tab === "settings" && <Settings admin={admin} />}
     </div>
   );

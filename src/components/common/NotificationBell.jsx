@@ -17,6 +17,7 @@ const ROUTES = {
   opportunity_interest: () => "/app/opportunities",
   investor_profile: () => "/app/investors",
   nri_service_request: () => "/app/investors",
+  market_digest: () => "/app/market-digest",
 };
 
 function timeAgo(value) {
@@ -118,6 +119,9 @@ export default function NotificationBell() {
                   ))
                 )}
               </div>
+              <button onClick={() => { close(); navigate("/app/notifications"); }} className="block w-full border-t border-line px-4 py-2.5 text-center text-xs font-semibold text-red-600 hover:bg-surface-muted">
+                Open Notification Centre
+              </button>
             </>
           )}
         </Popover.Panel>

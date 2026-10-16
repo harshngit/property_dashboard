@@ -1,4 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import DynamicFields, { toPayload } from "../../components/fields/DynamicFields";
+import { CoreFieldsProvider } from "../../components/fields/CoreFields";
+
+// The label each built-in field is written with -> its key in the Dynamic Field Manager.
+const CORE_LABELS = {"Property / project title": "title", "Property type": "propertyType", "Transaction type": "transactionType", "City": "city", "Locality": "locality", "Address (optional)": "address", "Price": "price", "Super built-up area (sqft)": "areaSqft", "Carpet area (sqft)": "carpetAreaSqft", "Bedrooms": "bedrooms", "Bathrooms": "bathrooms", "Facing": "facing", "Badge": "badge", "Tags (comma separated)": "tags", "RERA number (optional)": "reraNumber", "Possession status": "possessionStatus", "Floor number": "floorNumber", "Total floors": "totalFloors", "Furnishing": "furnishing", "Parking spots": "parkingSpots", "Parking type": "parkingType", "Age of property": "ageOfProperty", "Rate (₹ per sqft)": "rate", "Annual appreciation (%)": "annualAppreciationPercent", "Estimated rent (₹/month)": "estimatedRentMonthly", "Locality rating (0–5)": "localityRating", "Category": "listingCategory", "Amenities (comma separated)": "amenities", "Description": "description", "Additional details (shown on 'Read more')": "aboutExtended", "Auction date & time": "auctionDate", "Source bank": "sourceBank", "Occupancy (%)": "occupancyPercent", "Yield (%)": "yieldPercent", "Yield qualifier": "yieldQualifier", "Deal source": "opportunitySourceType", "Reserve / asking price (₹)": "reservePrice", "Estimated market value (₹)": "estimatedMarketValue", "Possession": "possessionType", "Inspection date": "inspectionDate", "EMD amount (₹)": "emdAmount", "EMD deadline": "emdDeadline", "Auction reference / ID": "auctionReferenceId", "Auction portal link": "auctionPortalUrl"};
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { LuSave, LuX, LuUpload, LuTrash2, LuCrown, LuImageOff, LuPlus } from "react-icons/lu";
@@ -7,6 +12,7 @@ import { TextField, SelectField, TextareaField } from "../../components/common/F
 import LocationAutocomplete from "../../components/common/LocationAutocomplete";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
+import { useOptions } from "../../context/SiteConfigContext";
 import {
   createProperty, updateProperty, uploadPropertyMedia, deletePropertyMedia, setPrimaryPropertyMedia,
 } from "../../redux/slices/propertiesSlice";
@@ -196,10 +202,32 @@ export default function PropertyForm({ mode = "create", property }) {
     mode === "edit" && property?.faqs?.length ? property.faqs : []
   );
   const [errors, setErrors] = useState({});
+  // Fields the Super Admin added in the Dynamic Field Manager (they depend on the city).
+  const [custom, setCustom] = useState(property?.customFields || {});
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [brokenPhotoIds, setBrokenPhotoIds] = useState(() => new Set());
   const fileInputRef = useRef(null);
+  // New listing: photos are picked first and uploaded right after the save.
+  const [pendingPhotos, setPendingPhotos] = useState([]);
+  const [coverIndex, setCoverIndex] = useState(0);
+  const pendingRef = useRef(pendingPhotos);
+  pendingRef.current = pendingPhotos;
+  useEffect(() => () => pendingRef.current.forEach((p) => URL.revokeObjectURL(p.preview)), []);
+
+  // Dropdowns come from the Super Admin's Site configuration; the lists above are the fallback.
+  const propertyTypes = useOptions("property_type", PROPERTY_TYPES, form.propertyType);
+  const transactionTypes = useOptions("transaction_type", TRANSACTION_TYPES, form.transactionType);
+  const listingCategories = useOptions("listing_category", LISTING_CATEGORY_OPTIONS, form.listingCategory);
+  const sourceOptions = useOptions("opportunity_source", OPPORTUNITY_SOURCE_OPTIONS, form.opportunitySourceType);
+  const dealPossessionOptions = useOptions("deal_possession", DEAL_POSSESSION_OPTIONS, form.possessionType);
+  const situationOptions = useOptions("situation_tags", SITUATION_TAGS, form.situationTags);
+  const riskOptions = useOptions("risk_indicators", RISK_INDICATORS, form.riskIndicators);
+  const badgeOptions = useOptions("badge", BADGE_OPTIONS, form.badge);
+  const facingOptions = useOptions("facing", FACING_OPTIONS, form.facing);
+  const possessionOptions = useOptions("possession_status", POSSESSION_OPTIONS, form.possessionStatus);
+  const furnishingOptions = useOptions("furnishing", FURNISHING_OPTIONS, form.furnishing);
+  const parkingTypeOptions = useOptions("parking_type", PARKING_TYPE_OPTIONS, form.parkingType);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   // Checkbox groups stored as arrays (situation tags, risk indicators).
@@ -227,9 +255,13 @@ export default function PropertyForm({ mode = "create", property }) {
   };
 
   const handlePhotoSelect = async (e) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []).filter((f) => f.type.startsWith("image/"));
     e.target.value = "";
     if (!files.length) return;
+    if (mode === "create") {
+      setPendingPhotos((list) => [...list, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+      return;
+    }
     setUploadingPhoto(true);
     for (const file of files) {
       const res = await dispatch(uploadPropertyMedia({ id: property.id, file }));
@@ -238,6 +270,28 @@ export default function PropertyForm({ mode = "create", property }) {
       }
     }
     setUploadingPhoto(false);
+  };
+
+  const removePendingPhoto = (index) => {
+    URL.revokeObjectURL(pendingPhotos[index].preview);
+    setPendingPhotos((list) => list.filter((_, i) => i !== index));
+    setCoverIndex((c) => (index === c ? 0 : index < c ? c - 1 : c));
+  };
+
+  // After the listing is created: the cover first (so it is the main photo), then the rest.
+  const uploadPending = async (propertyId) => {
+    const ordered = pendingPhotos.length ? [pendingPhotos[coverIndex] || pendingPhotos[0], ...pendingPhotos.filter((_, i) => i !== coverIndex)] : [];
+    let failed = 0;
+    for (const [i, p] of ordered.entries()) {
+      const res = await dispatch(uploadPropertyMedia({ id: propertyId, file: p.file }));
+      if (!uploadPropertyMedia.fulfilled.match(res)) {
+        failed += 1;
+        toast.push(res.payload || `Failed to upload ${p.file.name}.`, "error");
+      } else if (i === 0) {
+        await dispatch(setPrimaryPropertyMedia({ id: propertyId, mediaId: res.payload.media.id }));
+      }
+    }
+    return { uploaded: ordered.length - failed, failed };
   };
 
   const handlePhotoDelete = async (mediaId) => {
@@ -332,21 +386,23 @@ export default function PropertyForm({ mode = "create", property }) {
     };
 
     const res = mode === "create"
-      ? await dispatch(createProperty({ ...payload, price: form.price }))
-      : await dispatch(updateProperty({ id: property.id, ...payload }));
-
-    setSaving(false);
+      ? await dispatch(createProperty({ ...payload, price: form.price, customFields: toPayload(custom) }))
+      : await dispatch(updateProperty({ id: property.id, ...payload, customFields: toPayload(custom) }));
 
     const success = mode === "create" ? createProperty.fulfilled.match(res) : updateProperty.fulfilled.match(res);
+    const photos = success && mode === "create" ? await uploadPending(res.payload.id) : null;
+    setSaving(false);
+
     if (success) {
       if (mode === "create") {
+        const published = res.payload.status === "approved" ? "Property verified and published" : "Property submitted for approval";
         toast.push(
-          res.payload.status === "approved"
-            ? "Property verified and published — now add some photos."
-            : "Property submitted for approval — now add some photos.",
+          photos.uploaded
+            ? `${published} with ${photos.uploaded} photo${photos.uploaded === 1 ? "" : "s"}.`
+            : `${published} — now add some photos.`,
           "success"
         );
-        navigate(`/app/properties/${res.payload.id}/edit`);
+        navigate(photos.uploaded && !photos.failed ? `/app/properties/${res.payload.id}` : `/app/properties/${res.payload.id}/edit`);
       } else {
         toast.push("Property updated successfully.", "success");
         navigate("/app/properties");
@@ -363,13 +419,97 @@ export default function PropertyForm({ mode = "create", property }) {
         title={mode === "create" ? "Add a new property" : `Edit property — ${property?.title || ""}`}
         subtitle="Complete listing details will appear on the customer-facing site once approved."
       />
+      <CoreFieldsProvider entityType="property" labels={CORE_LABELS}>
       <form onSubmit={submit} className="card space-y-6 p-6">
+        <div>
+          <h3 className="mb-3 flex items-center justify-between text-sm font-bold uppercase tracking-wide text-ink-500">
+            <span>Photos{mode === "create" && <span className="ml-2 font-medium normal-case tracking-normal text-ink-400">add them now - they upload when you submit</span>}</span>
+            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto} className="btn-outline btn-sm normal-case tracking-normal">
+              {uploadingPhoto ? <InlineSpinner className="h-3.5 w-3.5" /> : <LuUpload className="h-3.5 w-3.5" />}
+              Add photos
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
+          </h3>
+          {mode === "create" ? (
+            pendingPhotos.length ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {pendingPhotos.map((p, i) => (
+                  <div key={p.preview} className="group relative aspect-square overflow-hidden rounded-xl border border-line bg-surface-sunk">
+                    <img src={p.preview} alt="" className="h-full w-full object-cover" />
+                    {i === coverIndex && (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] px-2 py-0.5 text-[10px] font-bold text-white">
+                        Cover
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-gradient-to-t from-ink-950/70 to-transparent p-1.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                      {i !== coverIndex && (
+                        <button type="button" onClick={() => setCoverIndex(i)} title="Make main photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-amber-600 hover:bg-white">
+                          <LuCrown className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => removePendingPhoto(i)} title="Remove photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-coral-600 hover:bg-white">
+                        <LuTrash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-surface-sunk px-4 py-8 text-sm text-ink-500 hover:border-red-300 hover:text-ink-700">
+                <LuUpload className="h-6 w-6" />
+                <span className="font-semibold">Upload property photos</span>
+                <span className="text-xs text-ink-400">JPG, PNG or WebP. The first one is the cover - you can change it.</span>
+              </button>
+            )
+          ) : property?.media?.length ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {property.media.map((m) => {
+                const isBroken = !m.url || brokenPhotoIds.has(m.id);
+                return (
+                  <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-line bg-surface-sunk">
+                    {isBroken ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-ink-400">
+                        <LuImageOff className="h-6 w-6" />
+                        <span className="text-[10px] font-medium">Preview unavailable</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={m.url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        onError={() => setBrokenPhotoIds((ids) => new Set(ids).add(m.id))}
+                      />
+                    )}
+                    {m.isPrimary && (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] px-2 py-0.5 text-[10px] font-bold text-white">
+                        Cover
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-gradient-to-t from-ink-950/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      {!m.isPrimary && (
+                        <button type="button" onClick={() => handleSetPrimary(m.id)} title="Make main photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-amber-600 hover:bg-white">
+                          <LuCrown className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => handlePhotoDelete(m.id)} title="Remove photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-coral-600 hover:bg-white">
+                        <LuTrash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="rounded-xl bg-surface-sunk px-4 py-3 text-xs text-ink-500">No photos uploaded yet.</p>
+          )}
+        </div>
+
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Listing details</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField label="Property / project title" placeholder="e.g. Orchid Heights" value={form.title} onChange={set("title")} error={errors.title} className="sm:col-span-2" />
-            <SelectField label="Property type" value={form.propertyType} onChange={set("propertyType")} options={PROPERTY_TYPES} />
-            <SelectField label="Transaction type" value={form.transactionType} onChange={set("transactionType")} options={TRANSACTION_TYPES} />
+            <SelectField label="Property type" value={form.propertyType} onChange={set("propertyType")} options={propertyTypes} />
+            <SelectField label="Transaction type" value={form.transactionType} onChange={set("transactionType")} options={transactionTypes} />
             <LocationAutocomplete
               label="Search location (Google)"
               onPlaceSelected={handlePlaceSelected}
@@ -387,14 +527,14 @@ export default function PropertyForm({ mode = "create", property }) {
             <TextField label="Carpet area (sqft)" type="number" placeholder="e.g. 1180" value={form.carpetAreaSqft} onChange={set("carpetAreaSqft")} />
             <TextField label="Bedrooms" type="number" placeholder="e.g. 3" value={form.bedrooms} onChange={set("bedrooms")} />
             <TextField label="Bathrooms" type="number" placeholder="e.g. 2" value={form.bathrooms} onChange={set("bathrooms")} />
-            <SelectField label="Facing" value={form.facing} onChange={set("facing")} options={FACING_OPTIONS} />
+            <SelectField label="Facing" value={form.facing} onChange={set("facing")} options={facingOptions} />
           </div>
         </div>
 
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Badges & tags</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <SelectField label="Badge" value={form.badge} onChange={set("badge")} options={BADGE_OPTIONS} />
+            <SelectField label="Badge" value={form.badge} onChange={set("badge")} options={badgeOptions} />
             <TextField label="Tags (comma separated)" placeholder="Ready to move, West facing, Bike & car parking" value={form.tags} onChange={set("tags")} />
           </div>
           <label className="mt-4 flex items-center gap-2.5 text-sm font-medium text-ink-700">
@@ -433,12 +573,12 @@ export default function PropertyForm({ mode = "create", property }) {
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Property details</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SelectField label="Possession status" value={form.possessionStatus} onChange={set("possessionStatus")} options={POSSESSION_OPTIONS} />
+            <SelectField label="Possession status" value={form.possessionStatus} onChange={set("possessionStatus")} options={possessionOptions} />
             <TextField label="Floor number" type="number" placeholder="e.g. 24" value={form.floorNumber} onChange={set("floorNumber")} />
             <TextField label="Total floors" type="number" placeholder="e.g. 60" value={form.totalFloors} onChange={set("totalFloors")} />
-            <SelectField label="Furnishing" value={form.furnishing} onChange={set("furnishing")} options={FURNISHING_OPTIONS} />
+            <SelectField label="Furnishing" value={form.furnishing} onChange={set("furnishing")} options={furnishingOptions} />
             <TextField label="Parking spots" type="number" placeholder="e.g. 2" value={form.parkingSpots} onChange={set("parkingSpots")} />
-            <SelectField label="Parking type" value={form.parkingType} onChange={set("parkingType")} options={PARKING_TYPE_OPTIONS} />
+            <SelectField label="Parking type" value={form.parkingType} onChange={set("parkingType")} options={parkingTypeOptions} />
             <TextField label="Age of property" placeholder="e.g. New Construction" value={form.ageOfProperty} onChange={set("ageOfProperty")} />
           </div>
           <label className="mt-4 flex items-center gap-2.5 text-sm font-medium text-ink-700">
@@ -460,7 +600,7 @@ export default function PropertyForm({ mode = "create", property }) {
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">Listing category</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <SelectField label="Category" value={form.listingCategory} onChange={set("listingCategory")} options={LISTING_CATEGORY_OPTIONS} />
+            <SelectField label="Category" value={form.listingCategory} onChange={set("listingCategory")} options={listingCategories} />
             {form.listingCategory === "auction" && (
               <>
                 <TextField label="Auction date &amp; time" type="datetime-local" value={form.auctionDate} onChange={set("auctionDate")} />
@@ -484,10 +624,10 @@ export default function PropertyForm({ mode = "create", property }) {
                 Deal details - the investment score, discount and liquidity are calculated automatically on save
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <SelectField label="Deal source" value={form.opportunitySourceType} onChange={set("opportunitySourceType")} options={OPPORTUNITY_SOURCE_OPTIONS} />
+                <SelectField label="Deal source" value={form.opportunitySourceType} onChange={set("opportunitySourceType")} options={sourceOptions} />
                 <TextField label="Reserve / asking price (₹)" type="number" min="0" placeholder="e.g. 12000000" value={form.reservePrice} onChange={set("reservePrice")} />
                 <TextField label="Estimated market value (₹)" type="number" min="0" placeholder="e.g. 16000000" value={form.estimatedMarketValue} onChange={set("estimatedMarketValue")} />
-                <SelectField label="Possession" value={form.possessionType} onChange={set("possessionType")} options={DEAL_POSSESSION_OPTIONS} />
+                <SelectField label="Possession" value={form.possessionType} onChange={set("possessionType")} options={dealPossessionOptions} />
                 <TextField label="Inspection date" type="datetime-local" value={form.inspectionDate} onChange={set("inspectionDate")} />
                 {form.listingCategory === "auction" && (
                   <>
@@ -503,7 +643,7 @@ export default function PropertyForm({ mode = "create", property }) {
                   <div>
                     <p className="field-label">Situation</p>
                     <div className="flex flex-wrap gap-3">
-                      {SITUATION_TAGS.map((t) => (
+                      {situationOptions.map((t) => (
                         <label key={t.value} className="flex items-center gap-2 text-sm text-ink-700">
                           <input type="checkbox" checked={form.situationTags.includes(t.value)} onChange={toggleList("situationTags", t.value)} /> {t.label}
                         </label>
@@ -514,7 +654,7 @@ export default function PropertyForm({ mode = "create", property }) {
                 <div>
                   <p className="field-label">Risk indicators</p>
                   <div className="flex flex-wrap gap-3">
-                    {RISK_INDICATORS.map((t) => (
+                    {riskOptions.map((t) => (
                       <label key={t.value} className="flex items-center gap-2 text-sm text-ink-700">
                         <input type="checkbox" checked={form.riskIndicators.includes(t.value)} onChange={toggleList("riskIndicators", t.value)} /> {t.label}
                       </label>
@@ -536,9 +676,11 @@ export default function PropertyForm({ mode = "create", property }) {
 
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">More information</h3>
+          <div className="grid gap-4">
           <TextField label="Amenities (comma separated)" placeholder="Clubhouse, Gym, Swimming pool" value={form.amenities} onChange={set("amenities")} className="mb-4" />
           <TextareaField label="Description" placeholder="Highlights, connectivity, possession date…" value={form.description} onChange={set("description")} className="mb-4" />
           <TextareaField label="Additional details (shown on 'Read more')" placeholder="Extended details shown when a buyer expands the description…" value={form.aboutExtended} onChange={set("aboutExtended")} />
+          </div>
         </div>
 
         <div>
@@ -568,64 +710,12 @@ export default function PropertyForm({ mode = "create", property }) {
         </div>
 
         {mode === "edit" && (
-          <div>
-            <h3 className="mb-3 flex items-center justify-between text-sm font-bold uppercase tracking-wide text-ink-500">
-              <span>Photos</span>
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto} className="btn-outline btn-sm normal-case tracking-normal">
-                {uploadingPhoto ? <InlineSpinner className="h-3.5 w-3.5" /> : <LuUpload className="h-3.5 w-3.5" />}
-                Add photos
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
-            </h3>
-            {property?.media?.length ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {property.media.map((m) => {
-                  const isBroken = !m.url || brokenPhotoIds.has(m.id);
-                  return (
-                    <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-line bg-surface-sunk">
-                      {isBroken ? (
-                        <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-ink-400">
-                          <LuImageOff className="h-6 w-6" />
-                          <span className="text-[10px] font-medium">Preview unavailable</span>
-                        </div>
-                      ) : (
-                        <img
-                          src={m.url}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          onError={() => setBrokenPhotoIds((ids) => new Set(ids).add(m.id))}
-                        />
-                      )}
-                      {m.isPrimary && (
-                        <span className="absolute left-1.5 top-1.5 rounded-full bg-[linear-gradient(135deg,#ff512f_0%,#dd2476_100%)] px-2 py-0.5 text-[10px] font-bold text-white">
-                          Cover
-                        </span>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-end gap-1 bg-gradient-to-t from-ink-950/70 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        {!m.isPrimary && (
-                          <button type="button" onClick={() => handleSetPrimary(m.id)} title="Make main photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-amber-600 hover:bg-white">
-                            <LuCrown className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        <button type="button" onClick={() => handlePhotoDelete(m.id)} title="Remove photo" className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-coral-600 hover:bg-white">
-                          <LuTrash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="rounded-xl bg-surface-sunk px-4 py-3 text-xs text-ink-500">No photos uploaded yet.</p>
-            )}
-          </div>
-        )}
-
-        {mode === "edit" && (
           <p className="rounded-xl bg-surface-sunk px-4 py-3 text-xs text-ink-500">
             Price changes, approvals and availability are managed from the property's action menu, not this form.
           </p>
         )}
+
+        <DynamicFields entityType="property" city={form.city} core={form} values={custom} onChange={setCustom} />
 
         <div className="flex justify-end gap-3 border-t border-line pt-5">
           <button type="button" onClick={() => navigate("/app/properties")} className="btn-outline">
@@ -633,10 +723,11 @@ export default function PropertyForm({ mode = "create", property }) {
           </button>
           <button type="submit" disabled={saving} className="btn-primary">
             {saving ? <InlineSpinner className="h-4 w-4" /> : <LuSave className="h-4 w-4" />}
-            {saving ? "Saving…" : mode === "create" ? "Submit listing" : "Save changes"}
+            {saving ? (pendingPhotos.length && mode === "create" ? "Saving and uploading photos…" : "Saving…") : mode === "create" ? "Submit listing" : "Save changes"}
           </button>
         </div>
       </form>
+      </CoreFieldsProvider>
     </div>
   );
 }

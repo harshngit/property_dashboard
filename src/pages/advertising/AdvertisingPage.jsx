@@ -1,3 +1,4 @@
+import CouponBox from "../../components/coupons/CouponBox";
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
@@ -184,6 +185,8 @@ function CampaignDetail({ id, staff, admin, payOnline, rateCard, onChanged }) {
             )}
             <button className="btn-outline ml-auto" disabled={busy} onClick={() => run(() => call(`/ads/campaigns/${c.id}/cancel`, { method: "POST" }), "Campaign cancelled.")}>Cancel campaign</button>
           </div>
+          {/* Engine 8: a scheme coupon comes off this invoice before paying. */}
+          <CouponBox service="advertising" entityId={c.id} onApplied={() => { reload(); onChanged(); }} />
         </div>
       )}
 

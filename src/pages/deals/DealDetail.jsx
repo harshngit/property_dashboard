@@ -1,3 +1,5 @@
+import CouponBox from "../../components/coupons/CouponBox";
+import { RecordFields } from "../../components/fields/DynamicFields";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -128,6 +130,10 @@ export default function DealDetail() {
 
       {/* Module 46 Mandate Status Panel - assigned rep and admins only */}
       {["internal_sales", "admin", "super_admin"].includes(role) && <MandateDealPanel dealId={id} />}
+      {["internal_sales", "admin", "super_admin"].includes(role) && <RecordFields entityType="agreement" entityId={id} title="Agreement details" />}
+      {["internal_sales", "admin", "super_admin"].includes(role) && deal.customer_user_id && (
+        <div className="card p-6"><CouponBox service="professional_fee" entityId={id} userId={deal.customer_user_id} label="Apply a scheme coupon for the buyer (comes off their next professional-fee invoice)" /></div>
+      )}
 
       <div className="card flex flex-wrap items-start justify-between gap-4 p-5">
         <div className="min-w-0">
@@ -187,6 +193,12 @@ export default function DealDetail() {
             <button className="btn-outline btn-sm" onClick={() => open("booking")}>
               <LuReceiptIndianRupee className="h-4 w-4" /> Record booking &amp; start legal
             </button>
+          )}
+          {["internal_sales", "admin", "super_admin"].includes(role) && (
+            <>
+            <Link className="btn-outline btn-sm" to={`/app/legal?dealId=${deal.id}`}>Open legal case</Link>
+            <Link className="btn-outline btn-sm" to={`/app/finance-desk?dealId=${deal.id}`}>Start loan application</Link>
+            </>
           )}
           {nextStages.length > 0 && (
             <button className="btn-outline btn-sm" onClick={() => open("stage", { stage: nextStages[0] })}>

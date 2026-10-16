@@ -99,6 +99,22 @@ function Panel({ title, icon: Icon, actions, children, className = "" }) {
   );
 }
 
+// Daily market update strip (sec. 20.4): the headline of the latest digest, linking to the full one.
+function MarketStrip() {
+  const navigate = useNavigate();
+  const { data } = useApiQuery("/market-digest/me");
+  if (!data?.latest) return null;
+  return (
+    <button onClick={() => navigate("/app/market-digest")} className="flex w-full items-center justify-between gap-4 rounded-[20px] border border-line bg-white px-5 py-3 text-left shadow-card hover:shadow-pop">
+      <span className="min-w-0">
+        <span className="block text-[11px] font-bold uppercase tracking-wide text-red-600">Daily market update</span>
+        <span className="block truncate text-sm font-semibold text-ink-900" data-no-translate>{data.latest.title}</span>
+      </span>
+      <span className="shrink-0 text-xs font-semibold text-red-600">Open</span>
+    </button>
+  );
+}
+
 // Every widget on this page is driven by GET /broker/* - a self-scoped
 // aggregation layer that works for any authenticated user (not just the
 // `broker` role), so "my dashboard" is accurate for whoever is logged in.
@@ -195,6 +211,8 @@ export default function Dashboard() {
       </div>
 
       <SponsoredBanner />
+
+      <MarketStrip />
 
       {/* What is waiting on this person - each tile opens the screen that handles it. */}
       {attention.data && (

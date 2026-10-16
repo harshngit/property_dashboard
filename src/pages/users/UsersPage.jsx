@@ -1,10 +1,13 @@
+import SuspendModal from "../suspensions/SuspendModal";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { LuPlus, LuPencil, LuTrash2, LuShieldCheck, LuKeyRound, LuCircleCheck, LuCheck, LuX, LuMail, LuClock, LuCalendar } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import DataTable from "../../components/common/DataTable";
 import Avatar from "../../components/common/Avatar";
-import { ConfirmDialog } from "../../components/common/Modal";
+import Modal, { ConfirmDialog } from "../../components/common/Modal";
+import { RecordFields } from "../../components/fields/DynamicFields";
 import QuickFormModal from "../../components/common/QuickFormModal";
 import { ROLES, ROLE_LABELS, ROLE_BADGE_CLASS } from "../../config/roles";
 import useAuth from "../../hooks/useAuth";
@@ -14,8 +17,10 @@ import {
 } from "../../redux/slices/usersSlice";
 import { registerUser, activateUserAccount, clearAuthError, clearRegisteredUser } from "../../redux/slices/authSlice";
 
-const STATUS_OPTIONS = ["active", "pending_approval", "suspended"];
-const STATUS_LABEL = { active: "Active", pending_approval: "Pending approval", suspended: "Suspended" };
+const STATUS_OPTIONS = ["active", "pending_approval", "suspended", "removed"];
+const STATUS_LABEL = { active: "Active", pending_approval: "Pending approval", suspended: "Suspended", removed: "Removed" };
+// Section 35: suspension is its own action (with public erasure), never a plain status edit.
+const EDITABLE_STATUSES = ["active", "pending_approval"];
 const STATUS_CLASS = {
   active: "bg-green-50 text-green-700",
   pending_approval: "bg-amber-50 text-amber-700",
@@ -48,6 +53,7 @@ export default function UsersPage() {
   const dispatch = useDispatch();
   const toast = useToast();
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const { list: rows, status } = useSelector((s) => s.users);
   const { registeredUser, error: inviteError, status: inviteStatus } = useSelector((s) => s.auth);
 
@@ -55,6 +61,9 @@ export default function UsersPage() {
   const [bulkDeleteIds, setBulkDeleteIds] = useState(null);
   const [editing, setEditing] = useState(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [suspendTarget, setSuspendTarget] = useState(null);
+  // KYC and profile fields added in the Dynamic Field Manager.
+  const [detailsOf, setDetailsOf] = useState(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [roleTarget, setRoleTarget] = useState(null);
   const [pwTarget, setPwTarget] = useState(null);
@@ -79,7 +88,7 @@ export default function UsersPage() {
       { key: "fullName", label: "Full name", placeholder: "e.g. Jane Doe" },
       { key: "email", label: "Email", placeholder: "name@propertyserch.com" },
       { key: "mobile", label: "Mobile", placeholder: "9876543210" },
-      { key: "status", label: "Status", type: "select", options: STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_LABEL[s] })) },
+      { key: "status", label: "Status", type: "select", options: EDITABLE_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] })) },
     ];
     if (role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN) {
       fields.push({ key: "tenantId", label: "Tenant ID", placeholder: "Optional" });
@@ -170,6 +179,9 @@ export default function UsersPage() {
 
   const getActions = (row) => [
     { label: "Edit user", icon: LuPencil, onClick: () => { setEditing(row); setEditOpen(true); } },
+    { label: "KYC and profile details", icon: LuCalendar, onClick: () => setDetailsOf(row) },
+    { label: "Suspend or remove", icon: LuX, tone: "danger", onClick: () => setSuspendTarget({ row, action: "suspended" }), hidden: !canChangeRole || row.id === user?.id || ["suspended", "removed"].includes(row.status) },
+    { label: "Suspension record", icon: LuClock, onClick: () => navigate(`/app/suspensions?user=${row.id}`), hidden: role !== ROLES.SUPER_ADMIN || !["suspended", "removed"].includes(row.status) },
     { label: "Change role", icon: LuShieldCheck, onClick: () => setRoleTarget(row), hidden: !canChangeRole },
     { label: "Activate account", icon: LuCircleCheck, onClick: () => handleActivate(row), hidden: row.status !== "pending_approval" },
     { label: "Reset password", icon: LuKeyRound, onClick: () => setPwTarget(row) },
@@ -242,6 +254,8 @@ export default function UsersPage() {
   };
 
   const handleKanbanDrop = async (row, status) => {
+    if (["suspended", "removed"].includes(status)) return setSuspendTarget({ row, action: status });
+    if (["suspended", "removed"].includes(row.status)) return toast.push("Reinstate the account from Suspended accounts - only the Super Admin can.", "error");
     const res = await dispatch(updateUser({ id: row.id, status }));
     if (updateUser.fulfilled.match(res)) {
       toast.push(`${row.name} moved to ${STATUS_LABEL[status] || status}.`, "success");
@@ -296,6 +310,18 @@ export default function UsersPage() {
         emptyTitle="No users yet"
         emptySubtitle="Invited users will appear here with their assigned role."
       />
+
+      <Modal open={!!detailsOf} onClose={() => setDetailsOf(null)} title="KYC and profile details" description={detailsOf?.name} maxWidth="max-w-2xl">
+        {detailsOf && (
+          <div className="space-y-4">
+            <RecordFields entityType="kyc" entityId={detailsOf.id} title="KYC" />
+            <RecordFields entityType="user_profile" entityId={detailsOf.id} title="Profile" />
+            <p className="text-xs text-ink-500">Fields appear here once a Super Admin adds them to the KYC or User profile form in the Field Manager.</p>
+          </div>
+        )}
+      </Modal>
+
+      <SuspendModal user={suspendTarget?.row} initialAction={suspendTarget?.action} onClose={() => setSuspendTarget(null)} onDone={() => dispatch(fetchUsers({ limit: 100 }))} />
 
       <QuickFormModal
         open={editOpen} onClose={() => setEditOpen(false)} onSubmit={handleEditSave}

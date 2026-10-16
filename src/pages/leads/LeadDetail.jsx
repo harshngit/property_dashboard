@@ -23,6 +23,7 @@ import AssignmentPanel from "../../components/assignment/AssignmentPanel";
 import LeadSourcesCard from "../../components/assignment/LeadSourcesCard";
 import LeadJourneyCard from "./LeadJourneyCard";
 import Customer360Card from "./Customer360Card";
+import { CustomFieldList } from "../../components/fields/DynamicFields";
 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "hot", "warm", "cold", "won", "lost"];
 
@@ -322,6 +323,12 @@ export default function LeadDetail() {
           <LeadJourneyCard key={lead.status} leadId={id} />
           <AssignmentPanel leadId={id} />
           <Customer360Card leadId={id} />
+          {lead.customFieldList?.length > 0 && (
+            <div className="card p-6">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-ink-500">Additional details</h3>
+              <CustomFieldList list={lead.customFieldList} />
+            </div>
+          )}
           <LeadSourcesCard leadId={id} />
           <LeadInsightPanels lead={lead} role={role} />
         </div>

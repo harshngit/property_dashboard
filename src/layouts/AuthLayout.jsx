@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
+import { useBranding } from "../lib/branding";
 
 export default function AuthLayout({ children, panelTitle, panelSubtitle, panelEyebrow = "Real estate CRM" }) {
+  // Sec. 14: a franchisee's own branded sign-in page on their white-label host.
+  const brand = useBranding();
+  const primary = /^#[0-9a-fA-F]{6}$/.test(brand?.primaryColor || "") ? brand.primaryColor : null;
   return (
     <div className="min-h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(255,81,47,0.14),_transparent_30%),linear-gradient(180deg,_rgba(255,81,47,0.08)_0%,_rgba(221,36,118,0.10)_100%)] px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
       <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-7xl overflow-hidden rounded-[2rem] border border-white/80 bg-white shadow-[0_35px_100px_-45px_rgba(24,31,66,0.35)] backdrop-blur sm:min-h-[calc(100vh-2rem)]">
@@ -40,6 +44,12 @@ export default function AuthLayout({ children, panelTitle, panelSubtitle, panelE
           <div className="absolute right-4 top-4 sm:right-6 sm:top-5">
             <LanguageSwitcher account={false} />
           </div>
+          {brand && (
+            <div className="absolute left-4 top-4 flex items-center gap-2 sm:left-6 sm:top-5" data-no-translate>
+              {brand.logoUrl ? <img src={brand.logoUrl} alt={brand.brandName || ""} className="h-8 max-w-[150px] object-contain" /> : <span className="font-display text-lg font-extrabold" style={{ color: primary || undefined }}>{brand.brandName}</span>}
+            </div>
+          )}
+          {primary && <style>{`.btn-primary { background: ${primary} !important; background-image: none !important; }`}</style>}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

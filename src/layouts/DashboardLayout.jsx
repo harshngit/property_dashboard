@@ -17,6 +17,25 @@ import GlobalSearch from "../components/common/GlobalSearch";
 import NotificationBell from "../components/common/NotificationBell";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import { PageTitleProvider, usePageTitle } from "../context/PageTitleContext";
+import { useSiteContent } from "../context/SiteConfigContext";
+
+// Banner and support contact the Super Admin sets in Site configuration.
+function SiteAnnouncement() {
+  const text = useSiteContent("announcement");
+  const email = useSiteContent("support_email");
+  const phone = useSiteContent("support_phone");
+  if (!text) return null;
+  return (
+    <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 sm:mx-6">
+      {text}
+      {(email || phone) && (
+        <span className="ml-2 text-amber-700">
+          Support: {[email && <a key="e" href={`mailto:${email}`} className="underline">{email}</a>, phone && <a key="p" href={`tel:${phone}`} className="underline">{phone}</a>].filter(Boolean).reduce((a, b) => [a, " · ", b])}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function BrandMark({ collapsed }) {
   return (
@@ -163,7 +182,7 @@ function DashboardShell() {
 
             <div className="flex items-center gap-3">
               {/* Staff search - investors (customers) only have their workspace. */}
-              {role !== "customer" && <GlobalSearch role={role} />}
+              {!["customer", "franchisee_admin"].includes(role) && <GlobalSearch role={role} />}
 
               <Menu as="div" className="relative">
                 <Menu.Button className="flex items-center gap-2.5 rounded-xl p-1 pr-2 hover:bg-surface-sunk">
@@ -225,6 +244,7 @@ function DashboardShell() {
             </div>
           )}
           <div className="mx-auto max-w-[1600px] animate-rise">
+            <SiteAnnouncement />
             <Outlet />
           </div>
         </main>

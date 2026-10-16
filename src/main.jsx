@@ -7,6 +7,7 @@ import App from "./App.jsx";
 import { store } from "./redux/store";
 import { injectStore } from "./api/client";
 import { ToastProvider } from "./components/common/ToastProvider";
+import { SiteConfigProvider } from "./context/SiteConfigContext";
 import { initI18n } from "./lib/i18n";
 import { API_BASE_URL } from "./config/api";
 
@@ -18,7 +19,9 @@ createRoot(document.getElementById("root")).render(
     <Provider store={store}>
       <BrowserRouter>
         <ToastProvider>
-          <App />
+          <SiteConfigProvider>
+            <App />
+          </SiteConfigProvider>
         </ToastProvider>
       </BrowserRouter>
     </Provider>

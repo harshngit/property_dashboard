@@ -16,6 +16,10 @@ const normalizeProperty = (p) =>
   p
     ? {
         id: p.id,
+        // Fields added in the Dynamic Field Manager.
+        customFields: p.customFields || {},
+        customFieldList: p.customFieldList || [],
+        customFieldsMissing: p.customFieldsMissing || [],
         tenantId: p.tenant_id,
         createdBy: p.created_by,
         createdByName: p.created_by_name,
@@ -135,7 +139,7 @@ export const fetchPropertyById = createAsyncThunk(
 );
 
 const PROPERTY_FIELDS = [
-  "title", "description", "aboutExtended", "propertyType", "transactionType", "city", "locality",
+  "customFields", "title", "description", "aboutExtended", "propertyType", "transactionType", "city", "locality",
   "address", "latitude", "longitude", "areaSqft", "carpetAreaSqft", "facing", "bedrooms", "bathrooms",
   "amenities", "tags", "badge", "verified", "reraNumber", "possessionStatus", "floorNumber",
   "totalFloors", "furnishing", "parkingSpots", "parkingType", "ageOfProperty", "gatedCommunity", "faqs",

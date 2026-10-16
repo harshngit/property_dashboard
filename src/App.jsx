@@ -48,6 +48,21 @@ import WorkspacePage from "./pages/workspace/WorkspacePage";
 import MatchingPage from "./pages/matching/MatchingPage";
 import TrustPage from "./pages/trust/TrustPage";
 import ReviewsPage from "./pages/reviews/ReviewsPage";
+import FranchisePage from "./pages/franchise/FranchisePage";
+import LegalPage from "./pages/legal/LegalPage";
+import FinanceDeskPage from "./pages/finance/FinanceDeskPage";
+import GetStartedPage from "./pages/onboarding/GetStartedPage";
+import OnboardingDeskPage from "./pages/onboarding/OnboardingDeskPage";
+import NotificationCentrePage from "./pages/notifications/NotificationCentrePage";
+import NotificationIntelPage from "./pages/notifications/NotificationIntelPage";
+import MarketDigestPage from "./pages/market/MarketDigestPage";
+import FieldManagerPage from "./pages/fields/FieldManagerPage";
+import SiteConfigPage from "./pages/site-config/SiteConfigPage";
+import CouponsPage from "./pages/coupons/CouponsPage";
+import SuspensionsPage from "./pages/suspensions/SuspensionsPage";
+import TaxPage from "./pages/tax/TaxPage";
+import BrokerNetworkPage from "./pages/network/BrokerNetworkPage";
+import FranchiseePortal from "./pages/franchise/FranchiseePortal";
 import FraudPage from "./pages/fraud/FraudPage";
 import DisputesPage from "./pages/disputes/DisputesPage";
 import InvoicesPage from "./pages/invoices/InvoicesPage";
@@ -70,7 +85,7 @@ import ReputationPage from "./pages/reputation/ReputationPage";
 import { MODULES } from "./config/roles";
 
 // Customers (investors) land in their workspace, everyone else on the dashboard.
-const homeFor = (role) => (role === "customer" ? "/app/workspace" : role === "advertiser" ? "/app/advertising" : "/app/dashboard");
+const homeFor = (role) => (role === "customer" ? "/app/workspace" : role === "advertiser" ? "/app/advertising" : role === "franchisee_admin" ? "/app/my-franchise" : "/app/dashboard");
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -258,6 +273,28 @@ export default function App() {
             <Route path="reviews" element={<ReviewsPage />} />
           </Route>
 
+          <Route element={<ModuleGuard moduleKey={MODULES.LEGAL} />}>
+            <Route path="legal" element={<LegalPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.FINANCE_DESK} />}>
+            <Route path="finance-desk" element={<FinanceDeskPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.GET_STARTED} />}>
+            <Route path="get-started" element={<GetStartedPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.ONBOARDING_DESK} />}>
+            <Route path="onboarding-desk" element={<OnboardingDeskPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.BROKER_NETWORK} />}>
+            <Route path="broker-network" element={<BrokerNetworkPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.FRANCHISE} />}>
+            <Route path="franchise" element={<FranchisePage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.FRANCHISEE_PORTAL} />}>
+            <Route path="my-franchise" element={<FranchiseePortal />} />
+          </Route>
+
           <Route element={<ModuleGuard moduleKey={MODULES.MATCHING} />}>
             <Route path="matching" element={<MatchingPage />} />
           </Route>
@@ -282,6 +319,34 @@ export default function App() {
             <Route path="admin" element={<AdminPage />} />
           </Route>
 
+          <Route element={<ModuleGuard moduleKey={MODULES.NOTIFICATION_INTEL} />}>
+            <Route path="notification-intelligence" element={<NotificationIntelPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.TAX} />}>
+            <Route path="tax" element={<TaxPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.SUSPENSIONS} />}>
+            <Route path="suspensions" element={<SuspensionsPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.COUPONS} />}>
+            <Route path="coupons" element={<CouponsPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.FIELD_MANAGER} />}>
+            <Route path="field-manager" element={<FieldManagerPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.SITE_CONFIG} />}>
+            <Route path="site-config" element={<SiteConfigPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.MARKET_DIGEST} />}>
+            <Route path="market-digest" element={<MarketDigestPage />} />
+          </Route>
+
+          <Route path="notifications" element={<NotificationCentrePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>

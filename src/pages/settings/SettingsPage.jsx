@@ -1,3 +1,4 @@
+import { RecordFields } from "../../components/fields/DynamicFields";
 import NotificationPreferences from "./NotificationPreferences";
 import PrivacyCard from "./PrivacyCard";
 import { useRef, useState } from "react";
@@ -42,7 +43,9 @@ const splitName = (fullName = "") => {
   return { firstName: parts[0] || "", lastName: parts.slice(1).join(" ") };
 };
 
-const splitMobile = (mobile = "") => {
+// An account without a mobile number has null here, not undefined.
+const splitMobile = (value) => {
+  const mobile = String(value || "");
   const match = mobile.trim().match(/^(\+\d{1,3})[\s-]?(.*)$/);
   return match ? { countryCode: match[1], number: match[2] } : { countryCode: "+91", number: mobile };
 };
@@ -53,7 +56,8 @@ export default function SettingsPage() {
   const toast = useToast();
   const fileInputRef = useRef(null);
 
-  const [activeTab, setActiveTab] = useState("profile");
+  // ?tab=notifications opens a tab directly (the Notification Centre links here).
+  const [activeTab, setActiveTab] = useState(() => { const t = new URLSearchParams(window.location.search).get("tab"); return TABS.some((x) => x.key === t) ? t : "profile"; });
 
   const { firstName: initFirst, lastName: initLast } = splitName(user?.name);
   const { countryCode: initCode, number: initNumber } = splitMobile(user?.mobile);
@@ -179,6 +183,7 @@ export default function SettingsPage() {
 
         <div className="min-w-0 flex-1 space-y-5">
           {activeTab === "profile" && (
+            <>
             <form onSubmit={saveProfile} className="card space-y-6 p-6">
               <div className="flex flex-wrap items-center gap-5">
                 <div className="relative shrink-0">
@@ -281,6 +286,8 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+            <div className="mt-5"><RecordFields entityType="user_profile" entityId={user?.id} title="More about you" /></div>
+            </>
           )}
 
           {activeTab === "password" && (
