@@ -1,6 +1,7 @@
 import { RecordFields } from "../../components/fields/DynamicFields";
 import NotificationPreferences from "./NotificationPreferences";
 import PrivacyCard from "./PrivacyCard";
+import DisclosuresCard from "./DisclosuresCard";
 import { useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
@@ -326,7 +327,12 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "notifications" && <NotificationPreferences />}
-          {activeTab === "privacy" && <PrivacyCard />}
+          {activeTab === "privacy" && (
+            <div className="space-y-5">
+              <PrivacyCard />
+              <DisclosuresCard />
+            </div>
+          )}
 
           {activeTab === "verification" && (
             <div className="card space-y-3 p-6">

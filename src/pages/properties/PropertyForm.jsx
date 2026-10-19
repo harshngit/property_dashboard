@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import DynamicFields, { toPayload } from "../../components/fields/DynamicFields";
-import { CoreFieldsProvider } from "../../components/fields/CoreFields";
+import { CoreFieldsProvider, CoreSlot } from "../../components/fields/CoreFields";
 
 // The label each built-in field is written with -> its key in the Dynamic Field Manager.
 const CORE_LABELS = {"Property / project title": "title", "Property type": "propertyType", "Transaction type": "transactionType", "City": "city", "Locality": "locality", "Address (optional)": "address", "Price": "price", "Super built-up area (sqft)": "areaSqft", "Carpet area (sqft)": "carpetAreaSqft", "Bedrooms": "bedrooms", "Bathrooms": "bathrooms", "Facing": "facing", "Badge": "badge", "Tags (comma separated)": "tags", "RERA number (optional)": "reraNumber", "Possession status": "possessionStatus", "Floor number": "floorNumber", "Total floors": "totalFloors", "Furnishing": "furnishing", "Parking spots": "parkingSpots", "Parking type": "parkingType", "Age of property": "ageOfProperty", "Rate (₹ per sqft)": "rate", "Annual appreciation (%)": "annualAppreciationPercent", "Estimated rent (₹/month)": "estimatedRentMonthly", "Locality rating (0–5)": "localityRating", "Category": "listingCategory", "Amenities (comma separated)": "amenities", "Description": "description", "Additional details (shown on 'Read more')": "aboutExtended", "Auction date & time": "auctionDate", "Source bank": "sourceBank", "Occupancy (%)": "occupancyPercent", "Yield (%)": "yieldPercent", "Yield qualifier": "yieldQualifier", "Deal source": "opportunitySourceType", "Reserve / asking price (₹)": "reservePrice", "Estimated market value (₹)": "estimatedMarketValue", "Possession": "possessionType", "Inspection date": "inspectionDate", "EMD amount (₹)": "emdAmount", "EMD deadline": "emdDeadline", "Auction reference / ID": "auctionReferenceId", "Auction portal link": "auctionPortalUrl"};
@@ -528,6 +528,7 @@ export default function PropertyForm({ mode = "create", property }) {
             <TextField label="Bedrooms" type="number" placeholder="e.g. 3" value={form.bedrooms} onChange={set("bedrooms")} />
             <TextField label="Bathrooms" type="number" placeholder="e.g. 2" value={form.bathrooms} onChange={set("bathrooms")} />
             <SelectField label="Facing" value={form.facing} onChange={set("facing")} options={facingOptions} />
+            <CoreSlot section="Listing details" />
           </div>
         </div>
 
@@ -536,6 +537,7 @@ export default function PropertyForm({ mode = "create", property }) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SelectField label="Badge" value={form.badge} onChange={set("badge")} options={badgeOptions} />
             <TextField label="Tags (comma separated)" placeholder="Ready to move, West facing, Bike & car parking" value={form.tags} onChange={set("tags")} />
+            <CoreSlot section="Badges and tags" />
           </div>
           <label className="mt-4 flex items-center gap-2.5 text-sm font-medium text-ink-700">
             <input type="checkbox" checked={form.verified} onChange={setChecked("verified")} className="h-4 w-4 rounded border-line text-red-500 focus:ring-red-500" />
@@ -546,6 +548,7 @@ export default function PropertyForm({ mode = "create", property }) {
         <div>
           <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ink-500">RERA</h3>
           <TextField label="RERA number (optional)" placeholder="e.g. P51800003521" value={form.reraNumber} onChange={set("reraNumber")} />
+          <CoreSlot section="RERA" />
         </div>
 
         <div>
@@ -580,6 +583,7 @@ export default function PropertyForm({ mode = "create", property }) {
             <TextField label="Parking spots" type="number" placeholder="e.g. 2" value={form.parkingSpots} onChange={set("parkingSpots")} />
             <SelectField label="Parking type" value={form.parkingType} onChange={set("parkingType")} options={parkingTypeOptions} />
             <TextField label="Age of property" placeholder="e.g. New Construction" value={form.ageOfProperty} onChange={set("ageOfProperty")} />
+            <CoreSlot section="Property details" />
           </div>
           <label className="mt-4 flex items-center gap-2.5 text-sm font-medium text-ink-700">
             <input type="checkbox" checked={form.gatedCommunity} onChange={setChecked("gatedCommunity")} className="h-4 w-4 rounded border-line text-red-500 focus:ring-red-500" />
@@ -594,6 +598,7 @@ export default function PropertyForm({ mode = "create", property }) {
             <TextField label="Annual appreciation (%)" type="number" step="0.1" placeholder="e.g. 8.4" value={form.annualAppreciationPercent} onChange={set("annualAppreciationPercent")} />
             <TextField label="Estimated rent (₹/month)" type="number" placeholder="e.g. 120000" value={form.estimatedRentMonthly} onChange={set("estimatedRentMonthly")} />
             <TextField label="Locality rating (0–5)" type="number" step="0.1" min="0" max="5" placeholder="e.g. 4.5" value={form.localityRating} onChange={set("localityRating")} />
+            <CoreSlot section="Rate and market trends" />
           </div>
         </div>
 
@@ -616,6 +621,7 @@ export default function PropertyForm({ mode = "create", property }) {
                 <TextField label="Yield qualifier" placeholder="e.g. Post Capex" value={form.yieldQualifier} onChange={set("yieldQualifier")} />
               </>
             )}
+            <CoreSlot section="Listing category" />
           </div>
 
           {DEAL_CATEGORIES.includes(form.listingCategory) && (
@@ -637,6 +643,7 @@ export default function PropertyForm({ mode = "create", property }) {
                     <TextField label="Auction portal link" type="url" placeholder="https://" value={form.auctionPortalUrl} onChange={set("auctionPortalUrl")} />
                   </>
                 )}
+                <CoreSlot section="Deal details" />
               </div>
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {form.listingCategory === "special_situation" && (
@@ -680,6 +687,7 @@ export default function PropertyForm({ mode = "create", property }) {
           <TextField label="Amenities (comma separated)" placeholder="Clubhouse, Gym, Swimming pool" value={form.amenities} onChange={set("amenities")} className="mb-4" />
           <TextareaField label="Description" placeholder="Highlights, connectivity, possession date…" value={form.description} onChange={set("description")} className="mb-4" />
           <TextareaField label="Additional details (shown on 'Read more')" placeholder="Extended details shown when a buyer expands the description…" value={form.aboutExtended} onChange={set("aboutExtended")} />
+          <CoreSlot section="More information" />
           </div>
         </div>
 

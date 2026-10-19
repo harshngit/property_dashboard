@@ -5,6 +5,7 @@ import Modal from "../../components/common/Modal";
 import StatusBadge from "../../components/common/StatusBadge";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { TextareaField } from "../../components/common/FormField";
+import DynamicFields, { fieldErrors, toPayload } from "../../components/fields/DynamicFields";
 import { useToast } from "../../components/common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
@@ -56,20 +57,27 @@ function VerificationForm({ onDone }) {
   const fileRef = useRef(null);
   const [kind, setKind] = useState("kyc");
   const [reference, setReference] = useState("");
+  // The KYC form's added fields (Dynamic Field Manager) go with a KYC submission.
+  const [custom, setCustom] = useState({});
+  const [customErrors, setCustomErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setBusy(true);
+    setCustomErrors({});
     try {
       const form = new FormData();
       form.append("kind", kind);
       if (reference) form.append("reference", reference);
       if (fileRef.current?.files?.[0]) form.append("file", fileRef.current.files[0]);
+      if (kind === "kyc") form.append("customFields", JSON.stringify(toPayload(custom)));
       await call("/trust/verifications", { method: "POST", body: form, isFormData: true });
       toast.push("Submitted - A R will verify it shortly.", "success");
       setReference("");
+      setCustom({});
       if (fileRef.current) fileRef.current.value = "";
       onDone();
     } catch (err) {
+      setCustomErrors(fieldErrors(err.details));
       toast.push(err.message, "error");
     } finally {
       setBusy(false);
@@ -96,6 +104,11 @@ function VerificationForm({ onDone }) {
       </label>
       <button className="btn-primary" disabled={busy} onClick={submit}>{busy ? "Submitting…" : "Submit"}</button>
       <p className="text-xs text-ink-500 sm:col-span-4">{info?.hint}</p>
+      {kind === "kyc" && (
+        <div className="sm:col-span-4">
+          <DynamicFields entityType="kyc" values={custom} onChange={setCustom} errors={customErrors} />
+        </div>
+      )}
     </div>
   );
 }

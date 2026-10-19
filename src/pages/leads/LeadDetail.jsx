@@ -1,3 +1,4 @@
+import RelatedPartyPill from "../../components/compliance/RelatedPartyPill";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -192,6 +193,7 @@ export default function LeadDetail() {
             <IconAction icon={LuUserCheck} label="Reassign" onClick={() => setAssignOpen(true)} />
           </div>
 
+          {lead.relatedParty && <div className="mt-3 flex justify-center"><RelatedPartyPill show /></div>}
           <button onClick={() => navigate(`/app/leads/${lead.id}/edit`)} className="btn-primary mt-4 w-full justify-center">
             <LuPencil className="h-4 w-4" /> Edit lead
           </button>

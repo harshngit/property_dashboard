@@ -3,6 +3,7 @@ import { LuFileText, LuCircleCheck, LuCircleX, LuTriangleAlert, LuUpload, LuPlus
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
 import { TextareaField } from "../common/FormField";
+import DynamicFields, { fieldErrors, toPayload } from "../fields/DynamicFields";
 import { useToast } from "../common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
@@ -23,7 +24,7 @@ export const DOC_TYPES = [
 const SEVERITY = { high: "text-red-700 bg-red-50", medium: "text-amber-800 bg-amber-50", low: "text-ink-700 bg-surface-muted" };
 const STATUS_TONE = { complete: "bg-emerald-50 text-emerald-700", issues: "bg-red-50 text-red-700", in_progress: "bg-amber-50 text-amber-800", not_started: "bg-surface-muted text-ink-600" };
 
-export default function DueDiligenceCard({ propertyId }) {
+export default function DueDiligenceCard({ propertyId, city }) {
   const toast = useToast();
   const call = useApiCall();
   const { role } = useAuth();
@@ -37,9 +38,18 @@ export default function DueDiligenceCard({ propertyId }) {
   const [link, setLink] = useState({ date: "", from: "", to: "", note: "" });
   const [reviewOpen, setReviewOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  // The due-diligence form's added fields (Dynamic Field Manager) are completed with the review.
+  const [custom, setCustom] = useState({});
+  const [customErrors, setCustomErrors] = useState({});
   const [busy, setBusy] = useState(false);
 
   if (report.error) return null; // no relationship to this listing
+  const openReview = async () => {
+    setNotes(report.data?.staffNotes || "");
+    setCustomErrors({});
+    setCustom((await call(`/fields/values/due_diligence/${propertyId}`).catch(() => null))?.data?.values || {});
+    setReviewOpen(true);
+  };
   const r = report.data;
   const refresh = () => {
     report.reload();
@@ -47,12 +57,14 @@ export default function DueDiligenceCard({ propertyId }) {
   };
   const run = async (fn, msg) => {
     setBusy(true);
+    setCustomErrors({});
     try {
       await fn();
       toast.push(msg, "success");
       refresh();
       return true;
     } catch (err) {
+      setCustomErrors(fieldErrors(err.details));
       toast.push(err.message, "error");
       return false;
     } finally {
@@ -76,7 +88,7 @@ export default function DueDiligenceCard({ propertyId }) {
         <div className="flex flex-wrap gap-1.5">
           <button className="btn-outline btn-sm" onClick={() => setUploading(true)}><LuUpload className="h-3.5 w-3.5" /> Add document</button>
           {staff && <button className="btn-outline btn-sm" onClick={() => setLinkOpen(true)}><LuPlus className="h-3.5 w-3.5" /> Title link</button>}
-          {staff && <button className="btn-outline btn-sm" onClick={() => { setNotes(r?.staffNotes || ""); setReviewOpen(true); }}>Record review</button>}
+          {staff && <button className="btn-outline btn-sm" onClick={openReview}>Record review</button>}
         </div>
       </div>
       {!r ? (
@@ -224,11 +236,14 @@ export default function DueDiligenceCard({ propertyId }) {
         </div>
       </Modal>
 
-      <Modal open={reviewOpen} onClose={() => setReviewOpen(false)} title="Due-diligence review">
+      <Modal open={reviewOpen} onClose={() => setReviewOpen(false)} title="Due-diligence review" maxWidth="max-w-2xl">
         <TextareaField label="Review notes (internal)" rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <div className="mt-3">
+          <DynamicFields entityType="due_diligence" city={city} values={custom} onChange={setCustom} errors={customErrors} />
+        </div>
         <div className="mt-3 flex justify-end gap-2">
           <button className="btn-outline" onClick={() => setReviewOpen(false)}>Cancel</button>
-          <button className="btn-primary" disabled={busy} onClick={() => run(() => call(`/due-diligence/properties/${propertyId}/review`, { method: "PUT", body: { notes } }), "Review recorded.").then((ok) => ok && setReviewOpen(false))}>Save</button>
+          <button className="btn-primary" disabled={busy} onClick={() => run(() => call(`/due-diligence/properties/${propertyId}/review`, { method: "PUT", body: { notes, customFields: toPayload(custom) } }), "Review recorded.").then((ok) => ok && setReviewOpen(false))}>Save</button>
         </div>
       </Modal>
     </div>

@@ -58,6 +58,7 @@ import NotificationIntelPage from "./pages/notifications/NotificationIntelPage";
 import MarketDigestPage from "./pages/market/MarketDigestPage";
 import FieldManagerPage from "./pages/fields/FieldManagerPage";
 import SiteConfigPage from "./pages/site-config/SiteConfigPage";
+import PartnerDeskPage from "./pages/partner-desk/PartnerDeskPage";
 import CouponsPage from "./pages/coupons/CouponsPage";
 import SuspensionsPage from "./pages/suspensions/SuspensionsPage";
 import TaxPage from "./pages/tax/TaxPage";
@@ -85,7 +86,7 @@ import ReputationPage from "./pages/reputation/ReputationPage";
 import { MODULES } from "./config/roles";
 
 // Customers (investors) land in their workspace, everyone else on the dashboard.
-const homeFor = (role) => (role === "customer" ? "/app/workspace" : role === "advertiser" ? "/app/advertising" : role === "franchisee_admin" ? "/app/my-franchise" : "/app/dashboard");
+const homeFor = (role) => (role === "customer" ? "/app/workspace" : role === "advertiser" ? "/app/advertising" : role === "franchisee_admin" ? "/app/my-franchise" : ["legal_professional", "loan_officer", "insurance_officer"].includes(role) ? "/app/partner-desk" : "/app/dashboard");
 
 function RootRedirect() {
   const { isAuthenticated, role } = useAuth();
@@ -337,6 +338,9 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.FIELD_MANAGER} />}>
             <Route path="field-manager" element={<FieldManagerPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.PARTNER_DESK} />}>
+            <Route path="partner-desk" element={<PartnerDeskPage />} />
           </Route>
           <Route element={<ModuleGuard moduleKey={MODULES.SITE_CONFIG} />}>
             <Route path="site-config" element={<SiteConfigPage />} />

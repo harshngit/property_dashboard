@@ -16,6 +16,7 @@ const normalizeProperty = (p) =>
   p
     ? {
         id: p.id,
+        relatedParty: !!p.related_party_transaction,
         // Fields added in the Dynamic Field Manager.
         customFields: p.customFields || {},
         customFieldList: p.customFieldList || [],

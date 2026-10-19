@@ -8,7 +8,7 @@ const Help = ({ text }) => (text ? <p className="mt-1 text-xs text-ink-500">{tex
 export function TextField({ label, error, className = "", ...props }) {
   const core = useCoreField(label);
   if (core.hidden) return null;
-  return (
+  return core.place(
     <div className={className} style={core.style}>
       <label className="field-label">{core.label}</label>
       <input className="field-input" {...props} />
@@ -21,7 +21,7 @@ export function TextField({ label, error, className = "", ...props }) {
 export function SelectField({ label, options = [], error, className = "", value, onChange, disabled, placeholder }) {
   const core = useCoreField(label);
   if (core.hidden) return null;
-  return (
+  return core.place(
     <div className={className} style={core.style}>
       <label className="field-label">{core.label}</label>
       <Select
@@ -40,7 +40,7 @@ export function SelectField({ label, options = [], error, className = "", value,
 export function TextareaField({ label, error, className = "", ...props }) {
   const core = useCoreField(label);
   if (core.hidden) return null;
-  return (
+  return core.place(
     <div className={className} style={core.style}>
       <label className="field-label">{core.label}</label>
       <textarea className="field-input min-h-[100px] resize-y" {...props} />

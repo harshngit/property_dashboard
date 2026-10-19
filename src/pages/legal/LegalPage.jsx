@@ -1,3 +1,4 @@
+import PartnerLoginButton from "../../components/partners/PartnerLoginButton";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { LuPlus } from "react-icons/lu";
@@ -234,6 +235,7 @@ function Panel({ admin }) {
                     {admin && (
                       <div className="flex justify-end gap-1.5">
                         <button className="btn-outline btn-sm" onClick={() => setForm({ id: p.id, kind: p.kind, fullName: p.fullName, firmName: p.firmName || "", enrolmentNumber: p.enrolmentNumber, enrolmentBody: p.enrolmentBody || "", email: p.email || "", mobile: p.mobile || "", states: (p.states || []).join(", "), cities: (p.cities || []).join(", "), specialities: p.specialities || [] })}>Edit</button>
+                        <PartnerLoginButton kind="legal" record={p} active={p.status === "empanelled"} onDone={reload} />
                         <button className={p.status === "empanelled" ? "btn-outline btn-sm" : "btn-primary btn-sm"} onClick={() => { setNote(""); setDeciding({ id: p.id, action: p.status === "pending" ? "empanel" : p.status === "empanelled" ? "suspend" : "reinstate", name: p.fullName }); }}>{p.status === "pending" ? "Empanel" : p.status === "empanelled" ? "Suspend" : "Reinstate"}</button>
                       </div>
                     )}

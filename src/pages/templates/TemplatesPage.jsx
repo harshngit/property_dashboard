@@ -8,6 +8,7 @@ import StatusBadge from "../../components/common/StatusBadge";
 import EmptyState from "../../components/common/EmptyState";
 import { InlineSpinner } from "../../components/common/PageLoader";
 import { TextField, TextareaField } from "../../components/common/FormField";
+import DynamicFields, { fieldErrors, toPayload as fieldPayload } from "../../components/fields/DynamicFields";
 import { useToast } from "../../components/common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
 import { buildQuery, useApiCall, useApiQuery } from "../../hooks/useApi";
@@ -60,18 +61,30 @@ function GenerateForm({ template, initialDeal, onDone }) {
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState(null);
+  // A document for a deal also takes the agreement form's added fields (Dynamic Field Manager), saved on the deal.
+  const [agreement, setAgreement] = useState({});
+  const [agreementErrors, setAgreementErrors] = useState({});
+  const [agreementFieldCount, setAgreementFieldCount] = useState(0);
   useEffect(() => { setValues({}); setErrors({}); }, [form?.dealId, form?.stateCode]);
+  useEffect(() => {
+    let gone = false;
+    setAgreement({});
+    setAgreementErrors({});
+    if (dealId) call(`/fields/values/agreement/${dealId}`).then((r) => !gone && setAgreement(r.data?.values || {})).catch(() => {});
+    return () => { gone = true; };
+  }, [dealId, call]);
   const val = (f) => (values[f.name] !== undefined ? values[f.name] : f.value ?? "");
   const set = (name) => (e) => setValues((v) => ({ ...v, [name]: e.target.value }));
   const generate = async (blank) => {
     setBusy(true);
     setErrors({});
     try {
-      const body = blank ? { blank: true } : { dealId, stateCode: form.stateCode || stateCode || undefined, values: Object.fromEntries(form.fields.map((f) => [f.name, val(f)])) };
+      const body = blank ? { blank: true } : { dealId, stateCode: form.stateCode || stateCode || undefined, values: Object.fromEntries(form.fields.map((f) => [f.name, val(f)])), ...(dealId ? { customFields: fieldPayload(agreement) } : {}) };
       const res = await call(`/templates/${template.id}/generate`, { method: "POST", body });
       setMade(res.data);
       onDone();
     } catch (err) {
+      setAgreementErrors(fieldErrors(err.details));
       toast.push(err.message, "error");
     } finally {
       setBusy(false);
@@ -115,6 +128,12 @@ function GenerateForm({ template, initialDeal, onDone }) {
               </label>
             ))}
           </div>
+          {dealId && (
+            <div className={agreementFieldCount ? "rounded-lg border border-line p-3" : ""}>
+              {agreementFieldCount > 0 && <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Agreement details (saved on the deal)</p>}
+              <DynamicFields entityType="agreement" values={agreement} onChange={setAgreement} errors={agreementErrors} onFields={(list) => setAgreementFieldCount(list.length)} />
+            </div>
+          )}
           <p className="rounded-lg bg-surface-muted p-3 text-xs text-ink-600">{form.disclaimer}</p>
           <div className="flex flex-wrap justify-end gap-2">
             <button className="btn-outline" disabled={busy} onClick={() => generate(true)}>Blank version</button>

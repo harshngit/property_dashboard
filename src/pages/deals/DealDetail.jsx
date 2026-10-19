@@ -1,3 +1,4 @@
+import RelatedPartyPill from "../../components/compliance/RelatedPartyPill";
 import CouponBox from "../../components/coupons/CouponBox";
 import { RecordFields } from "../../components/fields/DynamicFields";
 import { useEffect, useRef, useState } from "react";
@@ -140,6 +141,7 @@ export default function DealDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-bold text-ink-950">{deal.customer_name || "Customer"}</h2>
             <StatusBadge value={STAGE_LABELS[deal.stage] || deal.stage} />
+            <RelatedPartyPill show={deal.related_party_transaction} />
           </div>
           <p className="mt-1 text-sm text-ink-600">
             {deal.property_title ? (

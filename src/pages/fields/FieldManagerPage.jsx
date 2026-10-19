@@ -38,14 +38,14 @@ function toForm(f) {
     states: (f.applicableStates || []).join(", "), cities: (f.applicableCities || []).join(", "), roles: f.applicableRoles || [],
     ruleField: rule.field || "", ruleOperator: rule.operator || "equals", ruleValue: Array.isArray(rule.value) ? rule.value.join(", ") : rule.value ?? "", ruleKind: kind,
     defaultValue: f.defaultValue === null || f.defaultValue === undefined || typeof f.defaultValue === "object" ? "" : String(f.defaultValue),
-    keep: v, optionsSource: f.optionsSource || "", system: f.system, locked: f.locked, defaultLabel: f.defaultLabel,
+    keep: v, optionsSource: f.optionsSource || "", system: f.system, locked: f.locked, defaultLabel: f.defaultLabel, defaultSection: f.defaultSection, moved: f.moved,
   };
 }
 
 // The edit form -> what the API takes.
 function toBody(f, hasOptions) {
   // A built-in field: only how it is presented.
-  if (f.system) return { label: f.label, helpText: f.helpText, placeholder: f.placeholder, required: f.required };
+  if (f.system) return { label: f.label, helpText: f.helpText, placeholder: f.placeholder, required: f.required, section: f.section };
   const validation = { ...(f.keep || {}) };
   const put = (key, value) => { if (value === "" || value === undefined || value === false) delete validation[key]; else validation[key] = value; };
   put("min", f.min === "" ? "" : f.type === "date" ? f.min : Number(f.min));
@@ -70,7 +70,7 @@ function toBody(f, hasOptions) {
   };
 }
 
-function FieldEditor({ form, setForm, meta, states, canEdit, onSave, busy }) {
+function FieldEditor({ form, setForm, meta, states, canEdit, onSave, onPutBack, busy, homeSections }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
   const type = meta.types.find((t) => t.key === form.type) || {};
   const input = (label, key, props = {}) => <label className="field-label">{label}<input className="field-input mt-1" value={form[key]} onChange={set(key)} disabled={!canEdit} {...props} /></label>;
@@ -78,15 +78,26 @@ function FieldEditor({ form, setForm, meta, states, canEdit, onSave, busy }) {
   if (form.system) {
     return (
       <div className="space-y-4">
-        <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm text-ink-700">This is a built-in field. You can change how it is presented; its type and place in the form are fixed.{form.locked ? " Every record needs it, so it is always required and cannot be hidden." : ""}</p>
+        <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm text-ink-700">This is a built-in field. You can change how it is presented and move it to another section of its form; its type is fixed.{form.locked ? " Every record needs it, so it is always required and cannot be hidden." : ""}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {input("Label shown to people", "label", { id: "fm-label" })}
           <label className="field-label">Original label<input className="field-input mt-1" value={form.defaultLabel || ""} disabled /></label>
           {input("Help text under the field", "helpText")}
           {input("Placeholder", "placeholder")}
+          <label className="field-label">Section of the form
+            <select id="fm-section" className="field-select mt-1" value={form.section} onChange={set("section")} disabled={!canEdit}>
+              {homeSections.map((s) => <option key={s} value={s}>{s}{s === form.defaultSection ? " (original)" : ""}</option>)}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-ink-500">Moved to another section, it goes last there; use the arrows to place it.</span>
+          </label>
         </div>
         {!form.locked && check("Required", "required")}
-        {canEdit && <div className="flex justify-end"><button className="btn-primary" disabled={busy || form.label.trim().length < 2} onClick={onSave}>Save field</button></div>}
+        {canEdit && (
+          <div className="flex flex-wrap justify-end gap-2">
+            {form.moved && <button className="btn-outline" disabled={busy} onClick={onPutBack}>Put back where the form had it</button>}
+            <button className="btn-primary" disabled={busy || form.label.trim().length < 2} onClick={onSave}>Save field</button>
+          </div>
+        )}
       </div>
     );
   }
@@ -196,6 +207,8 @@ export default function FieldManagerPage() {
   const states = (Array.isArray(geo.data) ? geo.data : geo.data?.items || []).map((s) => ({ code: s.state_code || s.stateCode || s.code, name: s.state_name || s.stateName || s.name }));
   const fields = list.data || [];
   const sections = [...new Set(fields.map((f) => f.section))];
+  // The sections the form draws - where a built-in field can go.
+  const homeSections = [...new Set(fields.filter((f) => f.system).map((f) => f.defaultSection || f.section))];
   const entityInfo = meta.data.entities.find((e) => e.key === entity);
 
   const act = async (fn, msg) => {
@@ -216,6 +229,10 @@ export default function FieldManagerPage() {
   const save = async () => {
     const body = toBody(form, meta.data.types.find((t) => t.key === form.type)?.hasOptions);
     const ok = await act(() => call(form.id ? `/fields/${form.id}` : "/fields", { method: form.id ? "PUT" : "POST", body }), form.id ? "Field saved. It is live on the next page load." : "Field added. It is live on the next page load.");
+    if (ok) setForm(null);
+  };
+  const putBack = async () => {
+    const ok = await act(() => call(`/fields/${form.id}`, { method: "PUT", body: { putBack: true } }), "Field put back in its original section and place.");
     if (ok) setForm(null);
   };
   // Swap a field with its neighbour, then renumber the whole form in tens.
@@ -290,6 +307,7 @@ export default function FieldManagerPage() {
             <div>
               <p className="text-sm font-bold text-ink-900">Preview: what people see</p>
               <p className="text-xs text-ink-500">Type a city to see the fields for its state. Role-limited fields follow your own role.</p>
+              {entityInfo.form && <p className="mt-1 text-xs text-ink-500">Filled in on: {entityInfo.form}.</p>}
             </div>
             <label className="field-label">City<input id="fm-preview-city" className="field-input mt-1 w-56" value={previewCity} onChange={(e) => setPreviewCity(e.target.value)} placeholder="e.g. Hyderabad" /></label>
           </div>
@@ -300,7 +318,7 @@ export default function FieldManagerPage() {
       )}
 
       <Modal open={!!form} onClose={() => setForm(null)} title={form?.id ? (canEdit ? "Edit field" : "Field") : "Add field"} maxWidth="max-w-3xl">
-        {form && <FieldEditor form={form} setForm={setForm} meta={meta.data} states={states} canEdit={canEdit} onSave={save} busy={busy} />}
+        {form && <FieldEditor form={form} setForm={setForm} meta={meta.data} states={states} canEdit={canEdit} onSave={save} onPutBack={putBack} busy={busy} homeSections={homeSections} />}
       </Modal>
     </div>
   );

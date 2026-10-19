@@ -1,3 +1,4 @@
+import RelatedPartyPill from "../../components/compliance/RelatedPartyPill";
 import { CustomFieldList, RecordFields } from "../../components/fields/DynamicFields";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -287,7 +288,7 @@ export default function PropertyDetail() {
       </button>
       <div className="mb-1 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-ink-950">{property.title}</h1>
+          <h1 className="flex flex-wrap items-center gap-2 font-display text-xl font-bold text-ink-950">{property.title} <RelatedPartyPill show={property.relatedParty} /></h1>
           <p className="mt-0.5 text-sm text-ink-500">
             {[property.address, property.locality, property.city].filter(Boolean).join(", ") || "No address set"}
           </p>
@@ -644,7 +645,7 @@ export default function PropertyDetail() {
           <CustomFieldList list={property.customFieldList} />
         </div>
       )}
-      {["internal_sales", "admin", "super_admin"].includes(role) && <RecordFields entityType="due_diligence" entityId={id} city={property.city} title="Due diligence details" />}
+      {["internal_sales", "admin", "super_admin"].includes(role) && <RecordFields entityType="due_diligence" entityId={id} city={property.city} title="Due diligence details" canEdit={false} />}
       {["internal_sales", "admin", "super_admin"].includes(role) && <PropertyReviewsCard propertyId={id} />}
 
       {property.faqs?.length > 0 && (
@@ -662,7 +663,7 @@ export default function PropertyDetail() {
 
       <ListingChecksCard propertyId={id} />
 
-      <DueDiligenceCard propertyId={id} />
+      <DueDiligenceCard propertyId={id} city={property.city} />
 
       {property.listingCategory === "residential" && <MatchedBuyersCard propertyId={id} status={property.status} />}
 

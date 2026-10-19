@@ -1,3 +1,4 @@
+import PartnerLoginButton from "../../components/partners/PartnerLoginButton";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { LuPlus } from "react-icons/lu";
@@ -428,6 +429,7 @@ function Partners({ admin }) {
                     <td className={th}>{admin && (
                       <div className="flex justify-end gap-1.5">
                         <button className="btn-outline btn-sm" onClick={() => setOfficer({ id: o.id, institutionId: o.institutionId, institutionName: o.institutionName, insurer: o.role === "IO", fullName: o.fullName, designation: o.designation || "", licenceNumber: o.licenceNumber || "", email: o.email || "", mobile: o.mobile || "" })}>Edit</button>
+                        <PartnerLoginButton kind="officer" record={o} active={o.status === "verified"} onDone={officers.reload} />
                         <button className={o.status === "verified" ? "btn-outline btn-sm" : "btn-primary btn-sm"} onClick={() => { setNote(""); setDeciding({ path: `/finance/officers/${o.id}/decision`, action: o.status === "pending" ? "verify" : o.status === "verified" ? "suspend" : "reinstate", name: o.fullName }); }}>{o.status === "pending" ? "Verify" : o.status === "verified" ? "Suspend" : "Reinstate"}</button>
                       </div>
                     )}</td>

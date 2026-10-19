@@ -5,6 +5,7 @@ const normalizeLead = (l) =>
   l
     ? {
         id: l.id,
+        relatedParty: !!l.related_party_transaction,
         customFields: l.customFields || {},
         customFieldList: l.customFieldList || [],
         tenantId: l.tenant_id,

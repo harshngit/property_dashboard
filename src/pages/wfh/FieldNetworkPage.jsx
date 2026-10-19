@@ -156,7 +156,7 @@ function Submissions({ onChanged }) {
                 <p className="text-sm font-bold">Fraud risk {s.riskScore}/100{s.riskBand === "high" ? " - held for your decision" : ""}</p>
                 {(s.riskReasons || []).map((r, i) => <p key={`${r.rule}-${i}`} className="mt-0.5 flex justify-between gap-3"><span>{r.detail}</span>{r.points > 0 && <b>+{r.points}</b>}</p>)}
                 {!(s.riskReasons || []).length && <p>No warning signs.</p>}
-                {s.track && <p className="mt-1.5 border-t border-current/20 pt-1.5">Location track: {s.track.samples} position reports, {s.track.minutes} of {s.track.need} minutes at the property{s.track.pathM !== undefined ? `, moved ${s.track.pathM} m` : ""}{s.track.arrived ? ", seen arriving" : ""}.</p>}
+                {s.track && <p className="mt-1.5 border-t border-current/20 pt-1.5">Location track: {s.track.samples} position reports, {s.track.minutes} of {s.track.need} minutes at the property{s.track.pathM !== undefined ? `, moved ${s.track.pathM} m` : ""}{s.track.arrived ? ", seen arriving" : ""}{s.track.sources?.length ? `; recorded ${s.track.sources.map((x) => (x === "web" ? "in a browser" : `in the ${x === "ios" ? "iPhone" : "Android"} app`)).join(" and ")}` : ""}.</p>}
                 {s.aiAssessment && <p className="mt-1.5 border-t border-current/20 pt-1.5"><b>AI second opinion ({titleCase(s.aiAssessment.verdict.replace(/_/g, " "))}):</b> <span data-no-translate>{s.aiAssessment.reasoning}</span></p>}
               </div>
             ) : (s.fraudFlags || []).length > 0 && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">{s.fraudFlags.map((f) => <p key={f.rule}>{f.detail}</p>)}</div>}

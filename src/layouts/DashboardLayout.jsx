@@ -1,12 +1,12 @@
 import { Fragment, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, matchPath, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Menu, Transition } from "@headlessui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LuMenu, LuChevronDown, LuLogOut, LuUserCog, LuSettings, LuX,
 } from "react-icons/lu";
-import { NAV_ITEMS } from "../config/navigation";
+import { NAV_GROUPS, NAV_ITEMS } from "../config/navigation";
 import { ROLE_LABELS, canAccessModule } from "../config/roles";
 import { toggleMobileNav, closeMobileNav } from "../redux/slices/uiSlice";
 import useAuth from "../hooks/useAuth";
@@ -53,21 +53,74 @@ function BrandMark({ collapsed }) {
   );
 }
 
+// Categories the user closed, remembered in this browser.
+const CLOSED_KEY = "ps.sidebar.closedGroups";
+const readClosed = () => {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(CLOSED_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+};
+
 function SidebarContent({ role, collapsed }) {
+  const { pathname } = useLocation();
+  const [closed, setClosed] = useState(readClosed);
+  const items = NAV_ITEMS.filter((item) => canAccessModule(role, item.key));
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: items.filter((i) => i.group === g.key) })).filter((g) => g.items.length);
+  const isActive = (item) => !!matchPath({ path: item.to, end: !!item.end }, pathname);
+  const toggle = (key) =>
+    setClosed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        localStorage.setItem(CLOSED_KEY, JSON.stringify([...next]));
+      } catch {
+        /* the sidebar still works, just forgets */
+      }
+      return next;
+    });
+  // A role with a single category gets a plain list.
+  const showHeadings = groups.length > 1;
+
   return (
-    <nav className="no-scrollbar mt-6 flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4">
-      {NAV_ITEMS.filter((item) => canAccessModule(role, item.key)).map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          className={({ isActive }) => (isActive ? "sidebar-link-active" : "sidebar-link")}
-          title={collapsed ? item.label : undefined}
-        >
-          <item.icon className="h-[18px] w-[18px] shrink-0" />
-          {!collapsed && <span className="truncate">{item.label}</span>}
-        </NavLink>
-      ))}
+    <nav className="no-scrollbar mt-6 flex flex-1 flex-col overflow-y-auto px-3 pb-4">
+      {groups.map((g, gi) => {
+        // The category holding the current page always stays open.
+        const open = !showHeadings || collapsed || !closed.has(g.key) || g.items.some(isActive);
+        return (
+          <div key={g.key} className={gi > 0 ? (collapsed ? "mt-2 border-t border-line pt-2" : "mt-3") : ""}>
+            {showHeadings && !collapsed && (
+              <button
+                type="button"
+                onClick={() => toggle(g.key)}
+                aria-expanded={open}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-400 hover:text-ink-700"
+              >
+                <span>{g.label}</span>
+                <LuChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "" : "-rotate-90"}`} />
+              </button>
+            )}
+            {open && (
+              <div className="flex flex-col gap-1">
+                {g.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive: active }) => (active ? "sidebar-link-active" : "sidebar-link")}
+                    title={collapsed ? `${g.label}: ${item.label}` : undefined}
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </nav>
   );
 }

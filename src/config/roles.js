@@ -8,6 +8,10 @@ export const ROLES = {
   CUSTOMER: "customer",
   ADVERTISER: "advertiser",
   FRANCHISEE_ADMIN: "franchisee_admin",
+  // Panel partners (sec. 33.8): their own login, their own cases, never commission-bearing.
+  LEGAL_PROFESSIONAL: "legal_professional",
+  LOAN_OFFICER: "loan_officer",
+  INSURANCE_OFFICER: "insurance_officer",
 };
 
 export const ROLE_LABELS = {
@@ -20,6 +24,9 @@ export const ROLE_LABELS = {
   [ROLES.CUSTOMER]: "Customer",
   [ROLES.ADVERTISER]: "Advertiser",
   [ROLES.FRANCHISEE_ADMIN]: "Franchisee Admin",
+  [ROLES.LEGAL_PROFESSIONAL]: "Legal Professional",
+  [ROLES.LOAN_OFFICER]: "Loan Officer",
+  [ROLES.INSURANCE_OFFICER]: "Insurance Officer",
 };
 
 export const ROLE_BADGE_CLASS = {
@@ -32,6 +39,9 @@ export const ROLE_BADGE_CLASS = {
   [ROLES.CUSTOMER]: "bg-teal-500 text-white",
   [ROLES.ADVERTISER]: "bg-amber-600 text-white",
   [ROLES.FRANCHISEE_ADMIN]: "bg-teal-700 text-white",
+  [ROLES.LEGAL_PROFESSIONAL]: "bg-slate-700 text-white",
+  [ROLES.LOAN_OFFICER]: "bg-emerald-600 text-white",
+  [ROLES.INSURANCE_OFFICER]: "bg-sky-600 text-white",
 };
 
 // Module keys used across nav + permission checks
@@ -81,6 +91,8 @@ export const MODULES = {
   COUPONS: "coupons",
   SUSPENSIONS: "suspensions",
   TAX: "tax",
+  // The panel partners' own desk (advocates, loan and insurance officers).
+  PARTNER_DESK: "partner_desk",
   // Super Admin: dropdown lists and editable text of the dashboard and website.
   SITE_CONFIG: "site_config",
   // Module 37 Broker Network: co-broking.
@@ -130,7 +142,7 @@ export const MODULES = {
 // Which modules each role can access, and which actions they get in list pages
 export const ROLE_ACCESS = {
   [ROLES.SUPER_ADMIN]: {
-    modules: Object.values(MODULES).filter((m) => m !== MODULES.WORKSPACE && m !== MODULES.FRANCHISEE_PORTAL && m !== MODULES.GET_STARTED),
+    modules: Object.values(MODULES).filter((m) => m !== MODULES.WORKSPACE && m !== MODULES.FRANCHISEE_PORTAL && m !== MODULES.GET_STARTED && m !== MODULES.PARTNER_DESK),
     actions: { create: true, edit: true, delete: true, approve: true, export: true },
   },
   [ROLES.ADMIN]: {
@@ -180,6 +192,10 @@ export const ROLE_ACCESS = {
     modules: [MODULES.FRANCHISEE_PORTAL],
     actions: { create: true, edit: true, delete: false, approve: true, export: false },
   },
+  // Panel partners see their own desk and settings - nothing else in the CRM.
+  [ROLES.LEGAL_PROFESSIONAL]: { modules: [MODULES.PARTNER_DESK, MODULES.SETTINGS], actions: { create: false, edit: true, delete: false, approve: false, export: false } },
+  [ROLES.LOAN_OFFICER]: { modules: [MODULES.PARTNER_DESK, MODULES.SETTINGS], actions: { create: false, edit: true, delete: false, approve: false, export: false } },
+  [ROLES.INSURANCE_OFFICER]: { modules: [MODULES.PARTNER_DESK, MODULES.SETTINGS], actions: { create: false, edit: true, delete: false, approve: false, export: false } },
   // Approved advertisers only see their portal.
   [ROLES.ADVERTISER]: {
     modules: [MODULES.ADVERTISING],
