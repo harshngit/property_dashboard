@@ -243,6 +243,8 @@ function Rules({ admin, summary, onChanged }) {
 export default function CompliancePage() {
   const { role } = useAuth();
   const admin = ADMIN.includes(role);
+  // Related-party review: central reviewers see everything, a City / Area Head their own place.
+  const rpMe = useApiQuery("/related-party/me");
   const call = useApiCall();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -279,11 +281,11 @@ export default function CompliancePage() {
       </div>
       {t && t.critical > 0 && <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700"><LuShieldAlert className="h-4 w-4 shrink-0" />{t.critical} critical alert{t.critical === 1 ? "" : "s"} need{t.critical === 1 ? "s" : ""} action.</p>}
       <div className="flex gap-1 rounded-lg bg-surface-muted p-1 sm:w-fit">
-        {[["alerts", `Alerts${t?.active ? ` (${t.active})` : ""}`], ["privacy", "Data requests"], ...(admin ? [["related", "Related party"]] : []), ["rules", "Checks"]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`rounded-md px-4 py-1.5 text-xs font-semibold ${tab === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>)}
+        {[["alerts", `Alerts${t?.active ? ` (${t.active})` : ""}`], ["privacy", "Data requests"], ...(rpMe.data?.reviewer ? [["related", "Related party"]] : []), ["rules", "Checks"]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`rounded-md px-4 py-1.5 text-xs font-semibold ${tab === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>)}
       </div>
       {tab === "alerts" && <Alerts key={nonce} admin={admin} summary={summary.data} onChanged={summary.reload} />}
       {tab === "privacy" && <DataRequests key={nonce} admin={admin} superAdmin={role === "super_admin"} />}
-      {tab === "related" && admin && <RelatedPartyTab />}
+      {tab === "related" && rpMe.data?.reviewer && <RelatedPartyTab central={rpMe.data.scope === "all"} />}
       {tab === "rules" && <Rules admin={admin} summary={summary.data} onChanged={() => { summary.reload(); setNonce((n) => n + 1); }} />}
     </div>
   );

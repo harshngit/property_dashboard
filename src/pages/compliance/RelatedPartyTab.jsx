@@ -77,7 +77,8 @@ function ReviewModal({ item, onClose, onDone }) {
   );
 }
 
-export default function RelatedPartyTab() {
+// `central` = Super Admin / central reviewers; otherwise a City / Area Head, who sees only their place.
+export default function RelatedPartyTab({ central = true }) {
   const call = useApiCall();
   const toast = useToast();
   const [view, setView] = useState("queue");
@@ -109,20 +110,24 @@ export default function RelatedPartyTab() {
       <p className="rounded-xl bg-surface-muted px-4 py-3 text-xs text-ink-600">
         Employees may buy or sell on the platform. When a party is an employee's own account or a disclosed family member's (matched by mobile or PAN), the transaction is flagged, never assigned to that employee, and kept out of their performance - not blocked. Detections and reviews cannot be edited or deleted.
       </p>
+      {!central && <p className="text-xs font-semibold text-ink-600">Showing the transactions in your {dash.data?.scope === "area" ? "localities" : "city"}.</p>}
       {s && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {[["Linked accounts", s.linked_accounts], ["Listings", s.listings], ["Inquiries", s.inquiries], ["Deals", s.deals], ["Disclosures on file", s.disclosures], ["Detected in 30 days", s.detected_30d]].map(([l, v]) => (
+          {(central
+            ? [["Linked accounts", s.linked_accounts], ["Listings", s.listings], ["Inquiries", s.inquiries], ["Deals", s.deals], ["Disclosures on file", s.disclosures], ["Detected in 30 days", s.detected_30d]]
+            : [["Listings", s.listings], ["Inquiries", s.inquiries], ["Deals", s.deals], ["Awaiting review", s.awaiting_review]]
+          ).map(([l, v]) => (
             <div key={l} className="card p-4"><p className="text-xs font-semibold text-ink-500">{l}</p><p className="mt-1 font-display text-xl font-extrabold text-ink-950">{v}</p></div>
           ))}
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-lg bg-surface-sunk p-1">
-          {[["queue", "Transactions"], ["accounts", "Linked accounts"], ["disclosures", "Disclosures"]].map(([k, l]) => (
+          {(central ? [["queue", "Transactions"], ["accounts", "Linked accounts"], ["disclosures", "Disclosures"]] : [["queue", "Transactions"]]).map(([k, l]) => (
             <button key={k} onClick={() => setView(k)} className={`rounded-md px-4 py-1.5 text-xs font-semibold ${view === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>
           ))}
         </div>
-        <button className="btn-outline btn-sm ml-auto" disabled={scanning} onClick={rescan}><LuRefreshCw className={`h-4 w-4 ${scanning ? "animate-spin" : ""}`} /> Re-check now</button>
+        {central && <button className="btn-outline btn-sm ml-auto" disabled={scanning} onClick={rescan}><LuRefreshCw className={`h-4 w-4 ${scanning ? "animate-spin" : ""}`} /> Re-check now</button>}
       </div>
 
       {view === "queue" && (

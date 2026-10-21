@@ -22,7 +22,11 @@ const DESIGNATIONS = [
   { value: "dm", label: "DM - Deal Manager" },
   { value: "tl", label: "TL - Team Leader" },
   { value: "tc", label: "TC - Telecaller" },
+  // Sec. 33.3 Band B: they oversee their city / localities and are never routed inquiries.
+  { value: "ch", label: "CH - City Head" },
+  { value: "ah", label: "AH - Area Head" },
 ];
+const HEADS = ["ch", "ah"];
 const toList = (text) => String(text || "").split(",").map((x) => x.trim()).filter(Boolean);
 
 export default function RepresentativesPage() {
@@ -178,7 +182,15 @@ function Reps({ admin }) {
               onChange={(e) => setEditing((x) => ({ ...x, team_leader_id: e.target.value }))}
               options={[{ value: "", label: "None" }, ...leaders.filter((l) => l.value !== editing.user_id)]}
             />
-            <label className="flex items-center gap-2 text-sm text-ink-700">
+            {HEADS.includes(editing.designation) && (
+              <p className="rounded-lg bg-surface-muted px-3 py-2 text-xs text-ink-600">
+                {editing.designation === "ch"
+                  ? "A City Head holds the cities above: related-party review, cascade overrides, mandate renewals past the cap, and system-pool / mapping-gap alerts for those cities."
+                  : "An Area Head holds the localities above (within the cities, if given): the same duties for those localities."}{" "}
+                Heads are never routed inquiries.
+              </p>
+            )}
+            <label className={`flex items-center gap-2 text-sm text-ink-700 ${HEADS.includes(editing.designation) ? "hidden" : ""}`}>
               <input type="checkbox" checked={editing.accepts_assignments !== false} onChange={(e) => setEditing((x) => ({ ...x, accepts_assignments: e.target.checked }))} />
               Accepting new inquiries
             </label>
