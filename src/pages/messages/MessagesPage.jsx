@@ -8,11 +8,13 @@ import { useToast } from "../../components/common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate } from "../../lib/format";
+import { getSocket } from "../../lib/socket";
 
 // Module 36 - in-platform messaging. One conversation per enquiry between
 // the enquirer, the lister and the assigned A R Buildwel representative.
 // Contact details cannot be sent; the API rejects them and says why.
-// New messages are picked up every few seconds while a conversation is open.
+// Live via Socket.IO (see ../../lib/socket.js) while a conversation is open;
+// a slow poll stays underneath as a resync fallback if the socket drops.
 
 const STAFF = ["internal_sales", "admin", "super_admin"];
 const PARTY_TONE = { enquirer: "bg-sky-50 text-sky-800", lister: "bg-amber-50 text-amber-800", representative: "bg-emerald-50 text-emerald-800", staff: "bg-emerald-50 text-emerald-800" };
@@ -22,6 +24,7 @@ export function Conversation({ threadId, staff, onActivity }) {
   const call = useApiCall();
   const toast = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [thread, setThread] = useState(null);
   const [items, setItems] = useState([]);
   const [text, setText] = useState("");
@@ -49,6 +52,9 @@ export function Conversation({ threadId, staff, onActivity }) {
       }
     };
     load();
+
+    // Fallback resync only - the socket below delivers new messages
+    // instantly while connected; this just covers a dropped connection.
     const poll = setInterval(async () => {
       if (document.hidden) return;
       try {
@@ -60,8 +66,32 @@ export function Conversation({ threadId, staff, onActivity }) {
       } catch {
         /* next tick */
       }
-    }, 5000);
-    return () => { live = false; clearInterval(poll); };
+    }, 30000);
+
+    const socket = getSocket();
+    socket.emit("thread:join", threadId);
+    const onMessage = (m) => {
+      if (!live) return;
+      lastId.current = Math.max(lastId.current, m.id);
+      // `mine` on the broadcast is relative to whoever sent it, not this
+      // viewer - recompute it from senderId before storing.
+      const mine = m.senderId === user?.id;
+      setItems((cur) => (cur.some((c) => c.id === m.id) ? cur : [...cur, { ...m, mine }]));
+      call(`/chat/threads/${threadId}/read`, { method: "POST" }).then(onActivity).catch(() => {});
+    };
+    const onThreadStatus = (s) => {
+      if (live && s.threadId === threadId) setThread((cur) => (cur ? { ...cur, status: s.status, closedReason: s.closedReason } : cur));
+    };
+    socket.on("chat:message", onMessage);
+    socket.on("chat:thread_status", onThreadStatus);
+
+    return () => {
+      live = false;
+      clearInterval(poll);
+      socket.emit("thread:leave", threadId);
+      socket.off("chat:message", onMessage);
+      socket.off("chat:thread_status", onThreadStatus);
+    };
   }, [threadId, call]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { bottom.current?.scrollIntoView({ block: "end" }); }, [items.length]);
@@ -164,6 +194,15 @@ export default function MessagesPage() {
       .then((r) => { setParams({ thread: r.data.id }, { replace: true }); threads.reload(); startable.reload(); })
       .catch((err) => { toast.push(err.message, "error"); setParams({}, { replace: true }); });
   }, [lead]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the conversation list's unread badges live even for threads that
+  // aren't currently open.
+  useEffect(() => {
+    const socket = getSocket();
+    const onBump = () => threads.reload();
+    socket.on("chat:unread_bump", onBump);
+    return () => socket.off("chat:unread_bump", onBump);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = threads.data || [];
   return (
