@@ -1,5 +1,5 @@
 import {
-  LuSlidersHorizontal, LuRocket, LuStore, LuStar,
+  LuCoins, LuSlidersHorizontal, LuRocket, LuStore, LuStar,
   LuLayoutDashboard, LuUsers, LuBuilding2, LuUserRound, LuHandshake,
   LuFileStack, LuWallet, LuMessageCircle, LuSparkles, LuChartColumn,
   LuListChecks, LuSettings, LuShieldCheck, LuNetwork, LuLandmark,
@@ -54,6 +54,7 @@ export const NAV_ITEMS = [
   { key: MODULES.NOTIFICATION_INTEL, label: "Notification Intelligence", to: "/app/notification-intelligence", icon: LuBellRing, group: "insights" },
   { key: MODULES.FIELD_MANAGER, label: "Field Manager", to: "/app/field-manager", icon: LuFilePenLine, group: "admin" },
   { key: MODULES.SITE_CONFIG, label: "Site configuration", to: "/app/site-config", icon: LuSlidersHorizontal, group: "admin" },
+  { key: MODULES.AI_SETTINGS, label: "AI settings", to: "/app/ai-settings", icon: LuBrainCircuit, group: "admin" },
   { key: MODULES.COUPONS, label: "Coupons", to: "/app/coupons", icon: LuReceipt, group: "finance" },
   { key: MODULES.SUSPENSIONS, label: "Suspended accounts", to: "/app/suspensions", icon: LuShieldAlert, group: "trust" },
   { key: MODULES.TAX, label: "Tax and payouts", to: "/app/tax", icon: LuScale, group: "finance" },
@@ -84,6 +85,7 @@ export const NAV_ITEMS = [
   { key: MODULES.PAYMENTS, label: "Payments", to: "/app/payments", icon: LuWallet, group: "finance" },
   { key: MODULES.WHATSAPP, label: "WhatsApp", to: "/app/whatsapp", icon: LuMessageCircle, group: "sales" },
   { key: MODULES.AI, label: "AI Qualification", to: "/app/ai", icon: LuSparkles, group: "sales" },
+  { key: MODULES.AI_CREDITS, label: "AI credits", to: "/app/ai-credits", icon: LuCoins, group: "sales" },
   { key: MODULES.REPORTS, label: "Reports", to: "/app/reports", icon: LuChartColumn, group: "insights" },
   { key: MODULES.USERS, label: "Users & Roles", to: "/app/users", icon: LuShieldCheck, group: "admin" },
   { key: MODULES.CONTENT, label: "Website Content", to: "/app/content", icon: LuNewspaper, group: "insights" },

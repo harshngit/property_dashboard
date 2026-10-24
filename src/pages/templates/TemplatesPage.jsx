@@ -175,7 +175,79 @@ function Library({ staff, initialDeal, onGenerated }) {
   );
 }
 
+// AI review of a generated agreement: Claude reads the draft and lists missing
+// clauses, risky terms and inconsistencies. Paid in AI credits (free for staff).
+const SEVERITY_TONE = { high: "bg-red-50 text-red-700", medium: "bg-amber-50 text-amber-700", low: "bg-slate-100 text-slate-600" };
+const OVERALL = { ok: ["Looks in order", "bg-emerald-50 text-emerald-700"], needs_attention: ["Needs attention", "bg-amber-50 text-amber-700"], serious_issues: ["Serious issues", "bg-red-50 text-red-700"] };
+
+function ReviewResult({ r }) {
+  const [label, tone] = OVERALL[r.overall] || [r.overall, "bg-slate-100 text-slate-600"];
+  return (
+    <div className="space-y-3 text-sm">
+      <p><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${tone}`}>{label}</span></p>
+      <p className="text-ink-800">{r.summary}</p>
+      {r.issues?.length > 0 && (
+        <ul className="space-y-2">
+          {r.issues.map((i, k) => (
+            <li key={k} className="rounded-lg border border-line p-3">
+              <p className="flex items-center gap-2"><span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${SEVERITY_TONE[i.severity]}`}>{i.severity}</span><span className="font-semibold text-ink-900">{i.clause}</span></p>
+              <p className="mt-1 text-ink-700">{i.problem}</p>
+              <p className="mt-1 text-xs text-ink-600"><span className="font-semibold">Suggestion:</span> {i.suggestion}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {r.missing_clauses?.length > 0 && <div><p className="text-xs font-bold uppercase tracking-wide text-ink-500">Missing clauses</p><ul className="ml-4 list-disc text-ink-700">{r.missing_clauses.map((m, k) => <li key={k}>{m}</li>)}</ul></div>}
+      {r.inconsistencies?.length > 0 && <div><p className="text-xs font-bold uppercase tracking-wide text-ink-500">Inconsistencies</p><ul className="ml-4 list-disc text-ink-700">{r.inconsistencies.map((m, k) => <li key={k}>{m}</li>)}</ul></div>}
+    </div>
+  );
+}
+
+function AiReview({ doc }) {
+  const call = useApiCall();
+  const wallet = useApiQuery("/ai-credits/wallet");
+  const past = useApiQuery(`/templates/generated/${doc.id}/ai-reviews`);
+  const [focus, setFocus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const price = wallet.data?.prices?.find((p) => p.key === "agreement_review")?.credits;
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await call(`/templates/generated/${doc.id}/ai-review`, { method: "POST", body: { focus: focus || undefined } });
+      setResult(r.data);
+      wallet.reload();
+      past.reload();
+    } catch (err) {
+      setError({ message: err.message, credits: (err.details || []).some((d) => d.code === "insufficient_credits") });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const shown = result?.review || past.data?.[0]?.review;
+  return (
+    <div className="max-h-[75vh] space-y-4 overflow-y-auto pr-1">
+      <p className="text-xs text-ink-600">
+        {wallet.data?.staffFree ? "Free for A R Buildwel staff." : price ? `Costs ${price} AI credits - your balance is ${wallet.data?.balance ?? "…"}.` : ""}
+      </p>
+      <label className="field-label">Anything to look at closely? (optional)<input className="field-input mt-1" maxLength={300} placeholder="e.g. payment schedule, possession date, default clause" value={focus} onChange={(e) => setFocus(e.target.value)} /></label>
+      <button className="btn-primary" disabled={busy} onClick={run}>{busy ? "Reviewing… (up to a minute)" : shown ? "Review again" : "Review with AI"}</button>
+      {error && (
+        <p className="rounded-lg bg-coral-50 px-3 py-2 text-sm text-coral-700">
+          {error.message} {error.credits && <a href="/app/ai-credits" className="font-semibold underline">Buy credits</a>}
+        </p>
+      )}
+      {shown && <ReviewResult r={shown} />}
+      {result && <p className="text-[11px] text-ink-500">{result.disclaimer} Reviewed by {result.model}{result.creditsCharged ? ` · ${result.creditsCharged} credits used` : ""}.</p>}
+      {!result && past.data?.[0] && <p className="text-[11px] text-ink-500">Last review {formatDate(past.data[0].createdAt, true)} by {past.data[0].model}. AI working-draft review - not legal advice.</p>}
+    </div>
+  );
+}
+
 function Documents({ staff, nonce, initialDeal }) {
+  const [aiDoc, setAiDoc] = useState(null);
   const call = useApiCall();
   const toast = useToast();
   const download = useDownload();
@@ -207,12 +279,16 @@ function Documents({ staff, nonce, initialDeal }) {
               <td className={`${th} whitespace-nowrap text-right text-xs font-semibold`}>
                 <button className="mr-3 text-red-600 hover:underline" onClick={() => download(g.id, "pdf")}>PDF</button>
                 <button className="mr-3 text-red-600 hover:underline" onClick={() => download(g.id, "docx")}>DOCX</button>
+                {!g.isBlank && <button className="mr-3 text-violet-700 hover:underline" onClick={() => setAiDoc(g)}>Review with AI</button>}
                 {staff && g.draft && !g.isBlank && <button className="text-ink-700 hover:underline" onClick={() => review(g)}>Advocate review complete</button>}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <Modal open={!!aiDoc} onClose={() => setAiDoc(null)} title={aiDoc ? `AI review - ${aiDoc.documentNumber}` : ""} description="Claude reads the draft and points out missing clauses, risky terms and inconsistencies." maxWidth="max-w-3xl">
+        {aiDoc && <AiReview key={aiDoc.id} doc={aiDoc} />}
+      </Modal>
     </div>
   );
 }

@@ -59,6 +59,8 @@ import MarketDigestPage from "./pages/market/MarketDigestPage";
 import FieldManagerPage from "./pages/fields/FieldManagerPage";
 import SiteConfigPage from "./pages/site-config/SiteConfigPage";
 import PartnerDeskPage from "./pages/partner-desk/PartnerDeskPage";
+import AiCreditsPage from "./pages/ai-credits/AiCreditsPage";
+import AiSettingsPage from "./pages/ai-credits/AiSettingsPage";
 import CouponsPage from "./pages/coupons/CouponsPage";
 import SuspensionsPage from "./pages/suspensions/SuspensionsPage";
 import TaxPage from "./pages/tax/TaxPage";
@@ -338,6 +340,12 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.FIELD_MANAGER} />}>
             <Route path="field-manager" element={<FieldManagerPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.AI_CREDITS} />}>
+            <Route path="ai-credits" element={<AiCreditsPage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.AI_SETTINGS} />}>
+            <Route path="ai-settings" element={<AiSettingsPage />} />
           </Route>
           <Route element={<ModuleGuard moduleKey={MODULES.PARTNER_DESK} />}>
             <Route path="partner-desk" element={<PartnerDeskPage />} />
