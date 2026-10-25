@@ -72,6 +72,7 @@ import InvoicesPage from "./pages/invoices/InvoicesPage";
 import MandatesPage from "./pages/mandates/MandatesPage";
 import RepresentativesPage from "./pages/representatives/RepresentativesPage";
 import LeadSourcesPage from "./pages/lead-sources/LeadSourcesPage";
+import ChatIntakePage from "./pages/chat-intake/ChatIntakePage";
 import EnquiriesPage from "./pages/enquiries/EnquiriesPage";
 import InstitutionalPage from "./pages/institutional/InstitutionalPage";
 import AdvertisingPage from "./pages/advertising/AdvertisingPage";
@@ -258,6 +259,10 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.LEAD_SOURCES} />}>
             <Route path="lead-sources" element={<LeadSourcesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.CHAT_INTAKE} />}>
+            <Route path="chat-intake" element={<ChatIntakePage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.REPUTATION} />}>

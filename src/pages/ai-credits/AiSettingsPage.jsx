@@ -6,13 +6,14 @@ import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
 import useAuth from "../../hooks/useAuth";
 import { buildQuery, useApiCall, useApiQuery } from "../../hooks/useApi";
-import { formatINR, titleCase } from "../../lib/format";
+import { formatDate, formatINR, titleCase } from "../../lib/format";
 
-// AI orchestration settings. Each AI activity names its model (simple work on
-// the cheaper OpenAI model, important work such as agreements on Claude), the
-// fallback used when that provider fails, the credits a user pays (1 credit =
-// Rs 1) and whether the user or the platform pays. Credit packs, 30-day usage
-// and actual cost, and credits added by hand for bank transfers.
+// Serchi (AI) settings. Each AI activity names its model (simple work on the
+// cheaper OpenAI model, important work such as agreements on Claude), the
+// fallback used when that provider fails and the credits the asking user pays
+// (1 credit = Rs 1 - every AI call is user-paid, staff included). Credit packs,
+// the actual API cost in rupees against the credits charged, bank / UPI
+// payments to approve, purchases (invoices, refunds) and credits added by hand.
 
 const th = "px-4 py-3";
 const USD = (n) => `$${Number(n || 0).toFixed(Number(n) < 1 ? 4 : 2)}`;
@@ -20,7 +21,7 @@ const USD = (n) => `$${Number(n || 0).toFixed(Number(n) < 1 ? 4 : 2)}`;
 function ActivityEditor({ a, models, onSaved, onClose }) {
   const call = useApiCall();
   const toast = useToast();
-  const [f, setF] = useState({ provider: a.provider, model: a.model, fallbackProvider: a.fallbackProvider || "", fallbackModel: a.fallbackModel || "", effort: a.effort, maxOutputTokens: a.maxOutputTokens, credits: a.credits, payer: a.payer, active: a.active });
+  const [f, setF] = useState({ provider: a.provider, model: a.model, fallbackProvider: a.fallbackProvider || "", fallbackModel: a.fallbackModel || "", effort: a.effort, maxOutputTokens: a.maxOutputTokens, credits: a.credits, active: a.active });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
   const modelsOf = (p) => models.filter((m) => (p === "claude" ? m.startsWith("claude") : !m.startsWith("claude")));
@@ -54,8 +55,7 @@ function ActivityEditor({ a, models, onSaved, onClose }) {
         {f.fallbackProvider ? select("Fallback model", "fallbackModel", ["", ...modelsOf(f.fallbackProvider)]) : <span />}
         {select("Effort (Claude)", "effort", ["low", "medium", "high", "xhigh", "max"])}
         <label className="field-label">Longest reply (tokens)<input className="field-input mt-1" type="number" min="50" max="64000" value={f.maxOutputTokens} onChange={set("maxOutputTokens")} /></label>
-        {select("Who pays", "payer", [{ value: "user", label: "The user, in credits (staff free)" }, { value: "platform", label: "The platform" }])}
-        <label className="field-label">Credits per use (1 credit = Rs 1)<input className="field-input mt-1" type="number" min="0" value={f.credits} onChange={set("credits")} disabled={f.payer === "platform"} /></label>
+        <label className="field-label">Credits per use, paid by the asking user (1 credit = Rs 1)<input className="field-input mt-1" type="number" min="0" value={f.credits} onChange={set("credits")} /></label>
       </div>
       <label className="flex items-center gap-2 text-sm font-semibold text-ink-800"><input type="checkbox" className="h-4 w-4 accent-red-600" checked={!!f.active} onChange={set("active")} /> Switched on</label>
       <div className="flex justify-end gap-2">
@@ -151,6 +151,77 @@ function AddCredits({ packs, onDone }) {
   );
 }
 
+function TopupQueue({ onDone }) {
+  const call = useApiCall();
+  const toast = useToast();
+  const { data, reload } = useApiQuery("/ai-credits/admin/topups?status=pending");
+  const decide = async (t, action) => {
+    const note = action === "reject" ? window.prompt("Why is this payment not accepted? (sent to the user)") : "Matched with the bank statement";
+    if (action === "reject" && !note) return;
+    try {
+      await call(`/ai-credits/admin/topups/${t.id}/decide`, { method: "POST", body: { action, note } });
+      toast.push(action === "approve" ? "Approved - credits added and GST invoice issued." : "Rejected.", "success");
+      reload();
+      onDone();
+    } catch (err) {
+      toast.push(err.message, "error");
+    }
+  };
+  return (
+    <div className="card p-5">
+      <p className="mb-2 text-sm font-bold text-ink-900">Bank / UPI payments to check{data?.length ? ` (${data.length})` : ""}</p>
+      {!data?.length ? <p className="text-xs text-ink-500">Nothing waiting.</p> : (
+        <ul className="divide-y divide-line text-sm">
+          {data.map((t) => (
+            <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+              <span data-no-translate><span className="font-semibold">{t.userName}</span> · {t.packName} · {formatINR(t.amountInr, { compact: false })}<span className="block font-mono text-xs text-ink-500">{t.method.toUpperCase()} {t.reference}{t.paidOn ? ` · paid ${String(t.paidOn).slice(0, 10)}` : ""} · reported {formatDate(t.createdAt, true)}</span></span>
+              <span className="flex gap-2"><button className="btn-primary btn-sm" onClick={() => decide(t, "approve")}>Approve</button><button className="btn-outline btn-sm" onClick={() => decide(t, "reject")}>Reject</button></span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Purchases({ purchases, onDone }) {
+  const call = useApiCall();
+  const toast = useToast();
+  const refund = async (p) => {
+    const note = window.prompt(`Refund the ${p.unusedCredits} unused credits of ${p.receiptNumber}? Give the reason (the money itself is returned by finance).`);
+    if (!note) return;
+    try {
+      const r = await call(`/ai-credits/admin/purchases/${p.id}/refund`, { method: "POST", body: { note } });
+      toast.push(`${r.data.refundedCredits} credits taken back - refund Rs ${r.data.refundInr}.`, "success");
+      onDone();
+    } catch (err) {
+      toast.push(err.message, "error");
+    }
+  };
+  if (!purchases.length) return null;
+  return (
+    <div className="card overflow-x-auto">
+      <p className="px-5 pt-4 text-sm font-bold text-ink-900">Credit purchases</p>
+      <table className="w-full min-w-[820px] text-sm">
+        <thead className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-ink-500"><tr><th className={th}>Paid</th><th className={th}>User</th><th className={th}>Pack</th><th className={th}>Invoice</th><th className={th}>Paid by</th><th className={th}>Unused</th><th className={th} /></tr></thead>
+        <tbody>
+          {purchases.map((p) => (
+            <tr key={p.id} className="border-b border-line last:border-0">
+              <td className={`${th} text-xs text-ink-600`}>{formatDate(p.paidAt, true)}</td>
+              <td className={th} data-no-translate>{p.userName}</td>
+              <td className={th}>{p.packName} · {p.credits} credits<span className="block text-xs text-ink-500">{formatINR(p.totalInr, { compact: false })}</span></td>
+              <td className={`${th} font-mono text-xs`}>{p.invoiceNumber || "—"}</td>
+              <td className={`${th} text-xs`}>{p.gateway}{p.reference ? ` · ${p.reference}` : ""}</td>
+              <td className={th}>{p.status === "refunded" ? <span className="text-xs text-ink-500">Refunded {p.refundedCredits} (Rs {p.refundInr})</span> : p.unusedCredits ?? "—"}</td>
+              <td className={`${th} text-right`}>{p.status === "paid" && p.unusedCredits > 0 && <button className="btn-outline btn-sm" onClick={() => refund(p)}>Refund unused</button>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function AiSettingsPage() {
   const { role } = useAuth();
   const superAdmin = role === "super_admin";
@@ -160,13 +231,13 @@ export default function AiSettingsPage() {
   if (!data) return <div className="flex justify-center py-16"><InlineSpinner className="h-6 w-6" /></div>;
   const models = Object.keys(data.modelPrices || {});
   const price = (m) => data.modelPrices?.[m];
-  const totalCost = data.usage30d.reduce((s, u) => s + Number(u.cost_usd || 0), 0);
+  const totalCost = data.usage30d.reduce((s, u) => s + Number(u.costInr || 0), 0);
   const totalCredits = data.usage30d.reduce((s, u) => s + Number(u.credits || 0), 0);
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="AI" title="AI settings" subtitle="Which model each AI task uses, what it costs users in credits, credit packs, and what AI actually cost the platform." />
+      <PageHeader eyebrow="AI" title="AI settings" subtitle="Serchi - the one AI service every feature uses. Which model each task runs on, what the asking user pays in credits, and what each call actually cost." />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        {[["OpenAI", data.providers.openai ? "Connected" : "No key"], ["Claude", data.providers.claude ? "Connected" : "No key"], ["AI cost, 30 days", USD(totalCost)], ["Credits used, 30 days", totalCredits.toLocaleString("en-IN")], ["Credit sales, 30 days", formatINR(data.revenue30d.revenue_inr, { compact: false })]].map(([l, v]) => (
+        {[["OpenAI", data.providers.openai ? "Connected" : "No key"], ["Claude", data.providers.claude ? "Connected" : "No key"], ["API cost, 30 days", formatINR(totalCost, { compact: false })], ["Credits charged, 30 days", totalCredits.toLocaleString("en-IN")], ["Credit sales, 30 days", formatINR(data.revenue30d.revenue_inr, { compact: false })]].map(([l, v]) => (
           <div key={l} className="card p-4"><p className="text-xs font-semibold text-ink-500">{l}</p><p className="mt-1 font-display text-lg font-extrabold text-ink-950">{v}</p></div>
         ))}
       </div>
@@ -181,7 +252,7 @@ export default function AiSettingsPage() {
                 <td className={`${th} font-mono text-xs`}>{a.model}</td>
                 <td className={`${th} font-mono text-xs text-ink-500`}>{a.fallbackModel || "—"}</td>
                 <td className={`${th} text-xs`}>{price(a.model) ? `$${price(a.model).input} in / $${price(a.model).output} out` : "—"}</td>
-                <td className={th}>{a.payer === "user" && a.credits > 0 ? <span className="font-semibold">{a.credits} credits</span> : <span className="text-xs text-ink-500">Platform</span>}</td>
+                <td className={th}>{a.active ? <span className="font-semibold">{a.credits} credits</span> : <span className="text-xs text-ink-500">Off (rules / self-hosted)</span>}</td>
                 <td className={`${th} text-right`}>{superAdmin && <button className="btn-outline btn-sm" onClick={() => setEditing(a)}><LuPencil className="h-3.5 w-3.5" /> Edit</button>}</td>
               </tr>
             ))}
@@ -205,17 +276,43 @@ export default function AiSettingsPage() {
       </div>
 
       <div className="card overflow-x-auto">
-        <p className="px-5 pt-4 text-sm font-bold text-ink-900">Last 30 days</p>
-        <table className="w-full min-w-[760px] text-sm">
-          <thead className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-ink-500"><tr><th className={th}>Task</th><th className={th}>Model</th><th className={th}>Runs</th><th className={th}>Failed</th><th className={th}>Fallbacks</th><th className={th}>Tokens in / out</th><th className={th}>Cost</th><th className={th}>Credits</th></tr></thead>
+        <p className="px-5 pt-4 text-sm font-bold text-ink-900">Cost against credits, last 30 days</p>
+        <p className="px-5 text-xs text-ink-500">Actual API cost in rupees (at Rs {data.usdInrRate} per US$) against the credits charged. Keep every price above its cost.</p>
+        <table className="w-full min-w-[860px] text-sm">
+          <thead className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-ink-500"><tr><th className={th}>Task</th><th className={th}>Model</th><th className={th}>Runs</th><th className={th}>Failed</th><th className={th}>Tokens in / out</th><th className={th}>API cost</th><th className={th}>Per run</th><th className={th}>Credits</th><th className={th}>Margin</th></tr></thead>
           <tbody>
-            {data.usage30d.length === 0 ? <tr><td colSpan={8} className="px-5 py-4 text-xs text-ink-500">No AI calls yet.</td></tr> : data.usage30d.map((u) => (
+            {data.usage30d.length === 0 ? <tr><td colSpan={9} className="px-5 py-4 text-xs text-ink-500">No AI calls yet.</td></tr> : data.usage30d.map((u) => (
               <tr key={`${u.activity_key}-${u.model}`} className="border-b border-line last:border-0">
                 <td className={th}>{data.activities.find((a) => a.key === u.activity_key)?.label || u.activity_key}</td>
                 <td className={`${th} font-mono text-xs`}>{u.model}</td>
-                <td className={th}>{u.runs}</td><td className={th}>{u.failed}</td><td className={th}>{u.fallbacks}</td>
+                <td className={th}>{u.runs}</td><td className={th}>{u.failed}</td>
                 <td className={`${th} text-xs`}>{Number(u.input_tokens || 0).toLocaleString("en-IN")} / {Number(u.output_tokens || 0).toLocaleString("en-IN")}</td>
-                <td className={th}>{USD(u.cost_usd)}</td><td className={th}>{u.credits}</td>
+                <td className={th}>Rs {u.costInr.toFixed(2)}<span className="block text-[11px] text-ink-500">{USD(u.cost_usd)}</span></td>
+                <td className={`${th} text-xs`}>Rs {u.costPerRunInr.toFixed(2)}</td>
+                <td className={th}>{u.credits}</td>
+                <td className={`${th} font-semibold ${u.belowCost ? "text-coral-600" : "text-emerald-700"}`}>{u.belowCost ? "Below cost " : ""}Rs {u.marginInr.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <TopupQueue onDone={reload} />
+      <Purchases purchases={data.purchases || []} onDone={reload} />
+
+      <div className="card overflow-x-auto">
+        <p className="px-5 pt-4 text-sm font-bold text-ink-900">Latest AI actions</p>
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-ink-500"><tr><th className={th}>When</th><th className={th}>Task</th><th className={th}>Asked by</th><th className={th}>Model</th><th className={th}>API cost</th><th className={th}>Credits</th></tr></thead>
+          <tbody>
+            {(data.recentRuns || []).slice(0, 30).map((r) => (
+              <tr key={r.id} className="border-b border-line last:border-0">
+                <td className={`${th} text-xs text-ink-600`}>{formatDate(r.at, true)}</td>
+                <td className={th}>{r.label || r.activityKey}{r.status !== "ok" && <span className="ml-2 rounded bg-coral-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-coral-700">{r.status}</span>}</td>
+                <td className={th} data-no-translate>{r.userName || "—"}</td>
+                <td className={`${th} font-mono text-xs`}>{r.model || "—"}</td>
+                <td className={th}>Rs {r.costInr.toFixed(2)}</td>
+                <td className={`${th} ${r.belowCost ? "font-semibold text-coral-600" : ""}`}>{r.creditsCharged}</td>
               </tr>
             ))}
           </tbody>

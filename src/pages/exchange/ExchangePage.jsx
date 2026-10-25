@@ -12,7 +12,7 @@ import { formatDate, formatINR, titleCase } from "../../lib/format";
 
 // Module 45 - Property Exchange desk (A R staff).
 //   An owner raises a request on the website. Here the representative
-//   reviews the indicative valuation, sees every option the owner was
+//   reviews the indicative estimate, sees every option the owner was
 //   shown, confirms the one they chose (which opens the linked deals), and
 //   closes both legs together once each has met its own closing checks.
 
@@ -60,11 +60,11 @@ function Detail({ id, onChanged }) {
         <StatusBadge value={STATUS_LABEL[d.status]} />
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="card p-4"><p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Indicative value</p><p className="mt-1 font-display text-xl font-extrabold">{money(d.oldPropertyValuation)}</p><p className="text-[11px] text-ink-500">{titleCase(d.valuationSource || "not valued")} · asking {money(d.oldProperty.askingPrice)}</p>{["open", "option_chosen", "in_progress"].includes(d.status) && <button className="mt-1 text-xs font-semibold text-red-600 hover:underline" onClick={() => setValue({ value: d.oldPropertyValuation || "", note: "" })}>Set valuation</button>}</div>
+        <div className="card p-4"><p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Indicative estimate</p><p className="mt-1 font-display text-xl font-extrabold">{money(d.oldPropertyValuation)}</p><p className="text-[11px] text-ink-500">{titleCase(d.valuationSource || "no estimate yet")} · asking {money(d.oldProperty.askingPrice)}</p>{["open", "option_chosen", "in_progress"].includes(d.status) && <button className="mt-1 text-xs font-semibold text-red-600 hover:underline" onClick={() => setValue({ value: d.oldPropertyValuation || "", note: "" })}>Set estimate</button>}</div>
         <div className="card p-4"><p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Wants</p><p className="mt-1 text-sm font-semibold text-ink-900">{d.reinvestmentIntentLabel}</p><p className="text-xs text-ink-600" data-no-translate>{[d.wanted.propertyType, d.wanted.bedroomsMin ? `${d.wanted.bedroomsMin}+ BHK` : null, d.wanted.city, ...(d.wanted.localities || [])].filter(Boolean).join(" · ") || "Open to suggestions"}{d.wanted.budgetMax ? ` · up to ${money(d.wanted.budgetMax)}` : ""}</p></div>
         <div className="card p-4"><p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Typical target / gap</p><p className="mt-1 font-display text-xl font-extrabold">{money(d.guidance.targetTypicalValue)}</p><p className="text-[11px] text-ink-500">{d.guidance.estimatedGap === null ? d.guidance.targetBasis : d.guidance.estimatedGap >= 0 ? `Owner adds ${money(d.guidance.estimatedGap)}` : `Surplus ${money(-d.guidance.estimatedGap)}`}</p></div>
       </div>
-      {d.valuationBasis?.note && <p className="rounded-lg bg-surface-muted p-3 text-xs text-ink-700">Valuation basis: {d.valuationBasis.note}</p>}
+      {d.valuationBasis?.note && <p className="rounded-lg bg-surface-muted p-3 text-xs text-ink-700">Estimate basis: {d.valuationBasis.note}</p>}
       {d.notes && <p className="rounded-lg bg-surface-muted p-3 text-xs text-ink-700" data-no-translate>Owner's note: {d.notes}</p>}
 
       {waiting.length > 0 && (
@@ -109,12 +109,12 @@ function Detail({ id, onChanged }) {
         <p className="text-[11px] text-ink-400">{d.guidance.disclaimer}</p>
       </div>
 
-      <Modal open={!!value} onClose={() => setValue(null)} title="Indicative valuation" description="Shown to the owner with the standard disclaimer.">
+      <Modal open={!!value} onClose={() => setValue(null)} title="Indicative estimate" description="Shown to the owner with the standard disclaimer. It is an indicative estimate, never a valuation.">
         {value && (
           <div className="space-y-3">
             <TextField label="Indicative value (₹)" type="number" min="0" value={value.value} onChange={(e) => setValue({ ...value, value: e.target.value })} />
             <TextareaField label="What it is based on" rows={2} value={value.note} onChange={(e) => setValue({ ...value, note: e.target.value })} />
-            <div className="flex justify-end gap-2"><button className="btn-outline" onClick={() => setValue(null)}>Cancel</button><button className="btn-primary" disabled={busy || !(Number(value.value) > 0) || value.note.trim().length < 5} onClick={() => run(() => call(`/exchange/requests/${id}/valuation`, { method: "PUT", body: { value: Number(value.value), note: value.note } }), "Valuation saved.")}>Save</button></div>
+            <div className="flex justify-end gap-2"><button className="btn-outline" onClick={() => setValue(null)}>Cancel</button><button className="btn-primary" disabled={busy || !(Number(value.value) > 0) || value.note.trim().length < 5} onClick={() => run(() => call(`/exchange/requests/${id}/valuation`, { method: "PUT", body: { value: Number(value.value), note: value.note } }), "Estimate saved.")}>Save</button></div>
           </div>
         )}
       </Modal>
@@ -159,7 +159,7 @@ export default function ExchangePage() {
                 <tr key={r.id} className="cursor-pointer hover:bg-surface-muted/50" onClick={() => setOpen(r.id)}>
                   <td className={th}><p className="font-mono text-xs font-bold">{r.requestNumber}</p><p className="text-xs text-ink-500">{formatDate(r.createdAt)}</p></td>
                   <td className={th} data-no-translate><p className="font-semibold text-ink-900">{r.oldProperty.title}</p><p className="text-xs text-ink-500">{r.owner?.name} · {[r.oldProperty.locality, r.oldProperty.city].filter(Boolean).join(", ")}</p></td>
-                  <td className={th}>{money(r.oldPropertyValuation)}<p className="text-[11px] text-ink-500">{titleCase(r.valuationSource || "not valued")}</p></td>
+                  <td className={th}>{money(r.oldPropertyValuation)}<p className="text-[11px] text-ink-500">{titleCase(r.valuationSource || "no estimate yet")}</p></td>
                   <td className={`${th} max-w-[240px] text-xs text-ink-600`}>{r.reinvestmentIntentLabel}<p data-no-translate>{[r.wanted.propertyType, r.wanted.city].filter(Boolean).join(" · ")}</p></td>
                   <td className={`${th} text-xs`} data-no-translate>{r.representative?.name || "—"}</td>
                   <td className={th}><StatusBadge value={STATUS_LABEL[r.status]} />{r.interestsWaiting > 0 && <p className="mt-0.5 text-[11px] font-semibold text-red-600">{r.interestsWaiting} to confirm</p>}</td>

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { LuShieldCheck, LuStar, LuShare2, LuFileText, LuPlay, LuFlag, LuReply, LuTriangleAlert } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
+import AiButton, { AiDisclaimer } from "../../components/ai/AiButton";
 import Modal from "../../components/common/Modal";
 import StatusBadge from "../../components/common/StatusBadge";
 import { InlineSpinner } from "../../components/common/PageLoader";
@@ -370,6 +371,15 @@ function Moderation() {
                 {r.fraudReasons?.length ? <span className="text-ink-500"> · {r.fraudReasons.join(" · ")}</span> : null}
               </p>
               {r.reportedAt && <p className="mt-1 text-xs text-amber-700">Reported by the reviewed person: {r.reportReason}</p>}
+              {r.aiOpinion ? (
+                <div className="mt-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-900">
+                  <span className="font-semibold">AI second opinion: {r.aiOpinion.fakeLikelihood}% likely fake</span>
+                  {r.aiOpinion.reasons?.length ? <span> · {r.aiOpinion.reasons.join(" · ")}</span> : null}
+                  <AiDisclaimer text="AI second opinion only. The moderator makes the decision." />
+                </div>
+              ) : (
+                <div className="mt-2"><AiButton activity="review_screen" label="AI second opinion" run={() => call(`/trust/reviews/${r.id}/ai-second-opinion`, { method: "POST" })} onDone={reload} /></div>
+              )}
             </div>
             {ADMIN.includes(role) ? (
               <div className="flex gap-1.5">

@@ -69,6 +69,7 @@ export const NAV_ITEMS = [
   { key: MODULES.MANDATES, label: "Mandates", to: "/app/mandates", icon: LuScrollText, group: "listings" },
   { key: MODULES.REPRESENTATIVES, label: "Representatives", to: "/app/representatives", icon: LuUserCheck, group: "network" },
   { key: MODULES.LEAD_SOURCES, label: "Lead Sources", to: "/app/lead-sources", icon: LuInbox, group: "sales" },
+  { key: MODULES.CHAT_INTAKE, label: "Chat listings", to: "/app/chat-intake", icon: LuMessagesSquare, group: "sales" },
   { key: MODULES.INVOICES, label: "Invoice Centre", to: "/app/invoices", icon: LuReceipt, group: "finance" },
   { key: MODULES.REPUTATION, label: "Reputation Graph", to: "/app/reputation", icon: LuWaypoints, group: "trust" },
   { key: MODULES.OPPORTUNITIES, label: "Opportunity Deals", to: "/app/opportunities", icon: LuGavel, group: "listings" },
