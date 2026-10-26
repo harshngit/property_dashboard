@@ -66,6 +66,7 @@ export const NAV_ITEMS = [
   { key: MODULES.COMPLIANCE, label: "Compliance & Risk", to: "/app/compliance", icon: LuShieldAlert, group: "trust" },
   { key: MODULES.DISPUTES, label: "Disputes & DD", to: "/app/disputes", icon: LuScale, group: "trust" },
   { key: MODULES.INTELLIGENCE, label: "Deal Intelligence", to: "/app/intelligence", icon: LuBrainCircuit, group: "insights" },
+  { key: MODULES.MARKET_INTEL, label: "Market intelligence", to: "/app/market-intelligence", icon: LuChartColumn, group: "insights" },
   { key: MODULES.MANDATES, label: "Mandates", to: "/app/mandates", icon: LuScrollText, group: "listings" },
   { key: MODULES.REPRESENTATIVES, label: "Representatives", to: "/app/representatives", icon: LuUserCheck, group: "network" },
   { key: MODULES.LEAD_SOURCES, label: "Lead Sources", to: "/app/lead-sources", icon: LuInbox, group: "sales" },

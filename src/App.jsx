@@ -85,6 +85,7 @@ import ExchangePage from "./pages/exchange/ExchangePage";
 import FieldNetworkPage from "./pages/wfh/FieldNetworkPage";
 import TemplatesPage from "./pages/templates/TemplatesPage";
 import IntelligencePage from "./pages/intelligence/IntelligencePage";
+import MarketIntelPage from "./pages/market/MarketIntelPage";
 import ReputationPage from "./pages/reputation/ReputationPage";
 import { MODULES } from "./config/roles";
 
@@ -243,6 +244,9 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.INTELLIGENCE} />}>
             <Route path="intelligence" element={<IntelligencePage />} />
+          </Route>
+          <Route element={<ModuleGuard moduleKey={MODULES.MARKET_INTEL} />}>
+            <Route path="market-intelligence" element={<MarketIntelPage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.INVOICES} />}>
