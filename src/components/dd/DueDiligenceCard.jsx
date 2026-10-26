@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { LuFileText, LuCircleCheck, LuCircleX, LuTriangleAlert, LuUpload, LuPlus } from "react-icons/lu";
 import Modal from "../common/Modal";
+import AiButton, { AiDisclaimer } from "../ai/AiButton";
 import StatusBadge from "../common/StatusBadge";
 import { TextareaField } from "../common/FormField";
 import DynamicFields, { fieldErrors, toPayload } from "../fields/DynamicFields";
@@ -184,8 +185,13 @@ export default function DueDiligenceCard({ propertyId, city }) {
                   </p>
                   {d.ai_summary && <p className="text-xs text-ink-600">{d.ai_summary}</p>}
                   {(d.ai_flags || []).map((f, i) => (
-                    <p key={i} className={`mt-0.5 inline-block rounded px-1.5 text-[11px] ${SEVERITY[f.severity] || SEVERITY.low}`}>{titleCase(f.category)}: {f.detail}</p>
+                    <p key={i} className={`mt-0.5 inline-block rounded px-1.5 text-[11px] ${SEVERITY[f.severity] || SEVERITY.low}`}>{f.source === "ai" ? "AI · " : ""}{titleCase(f.category)}: {f.detail}</p>
                   ))}
+                  {d.ai_method === "ai" ? (
+                    <AiDisclaimer text="AI working analysis of the document. Not legal advice - verify every point with a qualified advocate before relying on it." />
+                  ) : (
+                    <div className="mt-1"><AiButton activity="document_analysis" label="Analyse with AI" run={() => call(`/due-diligence/documents/${d.id}/ai-analysis`, { method: "POST" })} onDone={() => { toast.push("Document analysed.", "success"); refresh(); }} /></div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -194,7 +200,7 @@ export default function DueDiligenceCard({ propertyId, city }) {
         </div>
       )}
 
-      <Modal open={uploading} onClose={() => setUploading(false)} title="Add document" description="It is classified and scanned for risks automatically.">
+      <Modal open={uploading} onClose={() => setUploading(false)} title="Add document" description="It is classified and scanned for risks automatically by rules. You can ask for an AI analysis afterwards (paid from your AI credits).">
         <div className="space-y-3">
           <input ref={fileRef} type="file" accept=".pdf,image/*" className="field-input py-1.5" />
           <label className="block text-xs font-semibold text-ink-600">

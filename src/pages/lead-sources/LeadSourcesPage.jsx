@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { LuCopy, LuRefreshCw } from "react-icons/lu";
+import AiButton, { AiDisclaimer } from "../../components/ai/AiButton";
 import PageHeader from "../../components/common/PageHeader";
 import Modal from "../../components/common/Modal";
 import EmptyState from "../../components/common/EmptyState";
@@ -201,12 +202,14 @@ function Inbox() {
   const [item, setItem] = useState(null);
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
+  const [aiNote, setAiNote] = useState(null);
   const counts = data?.counts || {};
 
   const open = async (id) => {
     try {
       const r = await call(`/lead-sources/inbox/${id}`);
       setItem(r.data);
+      setAiNote(null);
       setForm({ name: r.data.parsed_name || "", phone: "", email: r.data.parsed_email || "", city: r.data.parsed_city || "", locality: r.data.parsed_locality || "", budget: r.data.parsed_budget || "", message: r.data.parsed_message || "" });
     } catch (err) {
       toast.push(err.message, "error");
@@ -292,6 +295,19 @@ function Inbox() {
         {item && (
           <div className="space-y-3">
             <pre className="max-h-40 overflow-auto rounded-lg bg-surface-muted p-3 text-[11px] text-ink-700">{String(item.raw_payload || "").slice(0, 4000)}</pre>
+            <div className="flex flex-wrap items-start gap-3">
+              <AiButton
+                activity="email_lead_parse"
+                label="Read with AI"
+                run={() => call(`/lead-sources/inbox/${item.id}/ai-read`, { method: "POST" })}
+                onDone={(d) => {
+                  const g = d.suggested || {};
+                  setForm((f) => ({ ...f, name: g.name || f.name, phone: g.phone || f.phone, email: g.email || f.email, city: g.city || f.city, locality: g.locality || f.locality, budget: g.budget || f.budget, message: g.message || f.message }));
+                  setAiNote(d.disclaimer);
+                }}
+              />
+              <AiDisclaimer text={aiNote} />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <TextField label="Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
               <TextField label={`Mobile${item.parsed_phone_masked ? ` (on file: ${item.parsed_phone_masked})` : ""}`} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
