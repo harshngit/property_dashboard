@@ -1,13 +1,14 @@
+import AiButton, { AiDisclaimer } from "../../components/ai/AiButton";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LuSparkles, LuRefreshCw, LuSend, LuMessageCircle, LuUserCheck } from "react-icons/lu";
+import { LuSend, LuMessageCircle, LuUserCheck } from "react-icons/lu";
 import MatchBadge from "../../components/common/MatchBadge";
 import StatusBadge from "../../components/common/StatusBadge";
 import { useToast } from "../../components/common/ToastProvider";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate, formatINR, titleCase } from "../../lib/format";
 
-// Lead side panels: AI qualification (summary, Hot/Warm/Cold, extracted
+// Lead side panels: AI qualification (summary, Hot/Warm/Nurture/Cold, extracted
 // requirement), properties the matching engine recommends for this lead
 // (shareable on WhatsApp through the platform number) and the WhatsApp
 // conversation log.
@@ -62,23 +63,9 @@ export default function LeadInsightPanels({ lead, role }) {
       <Card
         title="AI qualification"
         action={
-          <div className="flex gap-1">
-            <button
-              title="Generate summary"
-              disabled={busy === "summary"}
-              className="rounded-lg border border-line p-1.5 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
-              onClick={() => run("summary", () => call("/ai/lead-summary", { method: "POST", body: { leadId: lead.id } }), "AI summary updated.", analysis.reload)}
-            >
-              <LuSparkles className="h-4 w-4" />
-            </button>
-            <button
-              title="Re-score lead"
-              disabled={busy === "score"}
-              className="rounded-lg border border-line p-1.5 text-ink-600 hover:bg-surface-muted disabled:opacity-50"
-              onClick={() => run("score", () => call("/ai/lead-score", { method: "POST", body: { leadId: lead.id } }), "Lead re-scored.", analysis.reload)}
-            >
-              <LuRefreshCw className="h-4 w-4" />
-            </button>
+          <div className="flex flex-wrap justify-end gap-1">
+            <AiButton activity="lead_insight" label="Qualify" className="btn-outline btn-sm" run={() => call("/ai/lead-summary", { method: "POST", body: { leadId: lead.id } })} onDone={() => { toast.push("AI qualification updated.", "success"); analysis.reload(); }} />
+            <AiButton activity="lead_insight" label="Re-rate" className="btn-outline btn-sm" run={() => call("/ai/lead-score", { method: "POST", body: { leadId: lead.id } })} onDone={() => { toast.push("Lead re-rated.", "success"); analysis.reload(); }} />
           </div>
         }
       >
@@ -111,9 +98,10 @@ export default function LeadInsightPanels({ lead, role }) {
                 ))}
             </dl>
             <p className="text-xs text-ink-400">Updated {formatDate(insight.created_at, true)}</p>
+            <AiDisclaimer text="AI reading of the lead's notes (Serchi). Indicative only - confirm the details with the customer. The rule-based lead score is separate." />
           </div>
         ) : (
-          <p className="text-xs text-ink-500">No AI analysis yet - click ✦ to summarise and score this lead.</p>
+          <p className="text-xs text-ink-500">No AI qualification yet. Serchi can read the lead's notes and rate it Hot / Warm / Nurture / Cold - paid from your AI credits.</p>
         )}
       </Card>
 

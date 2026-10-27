@@ -121,6 +121,7 @@ export default function InstitutionalListingDetail({ id, staff }) {
                 {report.riskFlags.map((x, i) => <li key={i} className="text-sm"><span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${SEV[x.severity]}`}>{x.severity}</span>{x.detail}</li>)}
                 {report.riskFlags.length === 0 && <li className="text-sm text-emerald-700">No flags.</li>}
               </ul>
+              {report.flagsNotice && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">{report.flagsNotice}</p>}
             </div>
           </div>
           <div className="mt-3 space-y-2">
