@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LuPencil, LuPlus } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import Modal from "../../components/common/Modal";
@@ -167,6 +167,14 @@ function TopupQueue({ onDone }) {
       toast.push(err.message, "error");
     }
   };
+  const screenshot = async (t) => {
+    try {
+      const r = await call(`/ai-credits/topups/${t.id}/screenshot`);
+      window.open(r.data.url, "_blank", "noopener");
+    } catch (err) {
+      toast.push(err.message, "error");
+    }
+  };
   return (
     <div className="card p-5">
       <p className="mb-2 text-sm font-bold text-ink-900">Bank / UPI payments to check{data?.length ? ` (${data.length})` : ""}</p>
@@ -175,7 +183,7 @@ function TopupQueue({ onDone }) {
           {data.map((t) => (
             <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
               <span data-no-translate><span className="font-semibold">{t.userName}</span> · {t.packName} · {formatINR(t.amountInr, { compact: false })}<span className="block font-mono text-xs text-ink-500">{t.method.toUpperCase()} {t.reference}{t.paidOn ? ` · paid ${String(t.paidOn).slice(0, 10)}` : ""} · reported {formatDate(t.createdAt, true)}</span></span>
-              <span className="flex gap-2"><button className="btn-primary btn-sm" onClick={() => decide(t, "approve")}>Approve</button><button className="btn-outline btn-sm" onClick={() => decide(t, "reject")}>Reject</button></span>
+              <span className="flex gap-2">{t.hasScreenshot ? <button className="btn-outline btn-sm" onClick={() => screenshot(t)}>Screenshot</button> : <span className="self-center text-[11px] text-ink-500">No screenshot</span>}<button className="btn-primary btn-sm" onClick={() => decide(t, "approve")}>Approve</button><button className="btn-outline btn-sm" onClick={() => decide(t, "reject")}>Reject</button></span>
             </li>
           ))}
         </ul>
@@ -218,6 +226,108 @@ function Purchases({ purchases, onDone }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const STATUS_DOT = (on, yes, no) => <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${on ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{on ? yes : no}</span>;
+
+// Bank / UPI details shown to users who pay by transfer, referral rewards,
+// how long each kind of credit lasts and the refund window. Admins see them;
+// only the Super Admin changes them (each change is in the audit log).
+function WalletRules() {
+  const call = useApiCall();
+  const toast = useToast();
+  const { data, reload } = useApiQuery("/ai-credits/admin/rules");
+  const [f, setF] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!data) return;
+    const v = (x) => (x === null || x === undefined ? "" : String(x));
+    setF({
+      bank: { ...data.paymentDetails.bank }, upi: { ...data.paymentDetails.upi }, note: data.paymentDetails.note,
+      join: v(data.referralRewards.join), usagePercent: v(data.referralRewards.usagePercent), dealClosed: v(data.referralRewards.dealClosed),
+      vPurchase: v(data.creditValidityDays.purchase), vGrant: v(data.creditValidityDays.grant), vReferral: v(data.creditValidityDays.referral),
+      refundDays: v(data.purchaseRefundDays), lowBalanceAlert: v(data.lowBalanceAlert),
+    });
+  }, [data]);
+  if (!data || !f) return <div className="card p-5"><InlineSpinner /></div>;
+  const edit = data.canEdit;
+  const n = (x) => (x === "" ? null : Number(x));
+  const save = async () => {
+    setBusy(true);
+    try {
+      await call("/ai-credits/admin/rules", {
+        method: "PUT",
+        body: {
+          paymentDetails: { bank: f.bank, upi: f.upi, note: f.note },
+          referralRewards: { join: Number(f.join || 0), usagePercent: Number(f.usagePercent || 0), dealClosed: Number(f.dealClosed || 0) },
+          creditValidityDays: { purchase: n(f.vPurchase), grant: n(f.vGrant), referral: n(f.vReferral) },
+          purchaseRefundDays: n(f.refundDays),
+          lowBalanceAlert: Number(f.lowBalanceAlert || 0),
+        },
+      });
+      toast.push("Saved - users see the new details and rules now.", "success");
+      reload();
+    } catch (err) {
+      toast.push(err.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const input = (label, value, onChange, props = {}) => (
+    <label className="field-label">{label}<input className="field-input mt-1" value={value} onChange={(e) => onChange(e.target.value)} disabled={!edit} {...props} /></label>
+  );
+  const setBank = (k) => (v) => setF((x) => ({ ...x, bank: { ...x.bank, [k]: v } }));
+  const setUpi = (k) => (v) => setF((x) => ({ ...x, upi: { ...x.upi, [k]: v } }));
+  const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
+  return (
+    <div className="card space-y-5 p-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="mr-auto text-sm font-bold text-ink-900">Payments and credit rules</p>
+        {STATUS_DOT(data.paymentReady.online, "Razorpay connected", "Razorpay keys not set")}
+        {STATUS_DOT(data.paymentReady.webhook, "Webhook secret set", "Webhook secret not set")}
+        {STATUS_DOT(data.paymentReady.bank || data.paymentReady.upi, "Bank / UPI details set", "Bank / UPI details missing")}
+      </div>
+      {!edit && <p className="text-xs text-ink-500">Only the Super Admin can change these.</p>}
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Bank account for transfers</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {input("Account name", f.bank.accountName, setBank("accountName"))}
+          {input("Account number", f.bank.accountNumber, setBank("accountNumber"), { inputMode: "numeric" })}
+          {input("IFSC", f.bank.ifsc, (v) => setBank("ifsc")(v.toUpperCase()), { maxLength: 11 })}
+          {input("Bank", f.bank.bankName, setBank("bankName"))}
+          {input("Branch", f.bank.branch, setBank("branch"))}
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {input("UPI id", f.upi.id, setUpi("id"), { placeholder: "e.g. arbuildwel@hdfcbank" })}
+        {input("UPI name", f.upi.name, setUpi("name"))}
+        {input("Note for payers (optional)", f.note, set("note"), { maxLength: 300 })}
+      </div>
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Referral rewards (credits)</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {input("When the person joins", f.join, set("join"), { type: "number", min: 0 })}
+          {input("Share of their AI spend (%)", f.usagePercent, set("usagePercent"), { type: "number", min: 0, max: 50 })}
+          {input("When their deal closes", f.dealClosed, set("dealClosed"), { type: "number", min: 0 })}
+        </div>
+      </div>
+      <div>
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-500">Credits expire after (days, empty = never) - as the Terms &amp; Conditions say</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {input("Bought credits", f.vPurchase, set("vPurchase"), { type: "number", min: 1, placeholder: "Never" })}
+          {input("Credits added by A R Buildwel", f.vGrant, set("vGrant"), { type: "number", min: 1, placeholder: "Never" })}
+          {input("Referral credits", f.vReferral, set("vReferral"), { type: "number", min: 1, placeholder: "Never" })}
+        </div>
+        <p className="mt-1 text-[11px] text-ink-500">A change applies to credits added from now on; credits already in wallets keep their expiry date.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {input("Refund window for unused bought credits (days, empty = no refunds)", f.refundDays, set("refundDays"), { type: "number", min: 0, max: 365, placeholder: "No refunds" })}
+        {input("Default low-balance alert (credits)", f.lowBalanceAlert, set("lowBalanceAlert"), { type: "number", min: 0 })}
+        <label className="field-label">GST on packs<input className="field-input mt-1" value={`${data.gstPercent}%`} disabled /></label>
+      </div>
+      {edit && <div className="flex justify-end"><button className="btn-primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</button></div>}
     </div>
   );
 }
@@ -297,6 +407,7 @@ export default function AiSettingsPage() {
         </table>
       </div>
 
+      <WalletRules />
       <TopupQueue onDone={reload} />
       <Purchases purchases={data.purchases || []} onDone={reload} />
 

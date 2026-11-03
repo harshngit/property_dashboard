@@ -197,7 +197,7 @@ export const ROLE_ACCESS = {
   },
   // A Franchisee Admin sees the franchise dashboard only - never leads or customers (sec. 14.9).
   [ROLES.FRANCHISEE_ADMIN]: {
-    modules: [MODULES.FRANCHISEE_PORTAL],
+    modules: [MODULES.FRANCHISEE_PORTAL, MODULES.AI_CREDITS],
     actions: { create: true, edit: true, delete: false, approve: true, export: false },
   },
   // Panel partners see their own desk and settings - nothing else in the CRM.
@@ -206,7 +206,7 @@ export const ROLE_ACCESS = {
   [ROLES.INSURANCE_OFFICER]: { modules: [MODULES.PARTNER_DESK, MODULES.SETTINGS, MODULES.AI_CREDITS], actions: { create: false, edit: true, delete: false, approve: false, export: false } },
   // Approved advertisers only see their portal.
   [ROLES.ADVERTISER]: {
-    modules: [MODULES.ADVERTISING],
+    modules: [MODULES.ADVERTISING, MODULES.AI_CREDITS],
     actions: { create: true, edit: true, delete: false, approve: false, export: false },
   },
 };

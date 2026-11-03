@@ -208,14 +208,14 @@ function Review({ id, onDone }) {
             <TextField label="Reason (sent to the poster)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Photos do not match the description" />
             <div className="flex gap-2">
               <button className="btn-primary" disabled={reason.trim().length < 3 || !!busy} onClick={() => act("reject")}>{busy === "reject" ? "Rejecting…" : "Reject listing"}</button>
-              <button className="btn-secondary" onClick={() => setRejecting(false)}>Cancel</button>
+              <button className="btn-outline" onClick={() => setRejecting(false)}>Cancel</button>
             </div>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2 border-t border-line pt-3">
             <button className="btn-primary" disabled={!!busy} onClick={() => act("approve")}>{busy === "approve" ? "Approving…" : institutional ? "Approve to institutional desk" : "Approve listing"}</button>
-            <button className="btn-secondary" disabled={!!busy} onClick={() => act("save")}>{busy === "save" ? "Saving…" : "Save changes"}</button>
-            <button className="btn-secondary text-coral-700" disabled={!!busy} onClick={() => setRejecting(true)}>Reject</button>
+            <button className="btn-outline" disabled={!!busy} onClick={() => act("save")}>{busy === "save" ? "Saving…" : "Save changes"}</button>
+            <button className="btn-outline text-coral-700" disabled={!!busy} onClick={() => setRejecting(true)}>Reject</button>
           </div>
         )
       ) : (

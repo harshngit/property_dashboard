@@ -7,7 +7,7 @@ import {
   LuMenu, LuChevronDown, LuLogOut, LuUserCog, LuSettings, LuX,
 } from "react-icons/lu";
 import { NAV_GROUPS, NAV_ITEMS } from "../config/navigation";
-import { ROLE_LABELS, canAccessModule } from "../config/roles";
+import { MODULES, ROLE_LABELS, canAccessModule } from "../config/roles";
 import { toggleMobileNav, closeMobileNav } from "../redux/slices/uiSlice";
 import useAuth from "../hooks/useAuth";
 import useRouteLoading from "../hooks/useRouteLoading";
@@ -15,6 +15,7 @@ import Avatar from "../components/common/Avatar";
 import PageLoader from "../components/common/PageLoader";
 import GlobalSearch from "../components/common/GlobalSearch";
 import NotificationBell from "../components/common/NotificationBell";
+import CreditBalanceChip from "../components/ai/CreditBalanceChip";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import { PageTitleProvider, usePageTitle } from "../context/PageTitleContext";
 import { useSiteContent } from "../context/SiteConfigContext";
@@ -281,6 +282,7 @@ function DashboardShell() {
                 </Transition>
               </Menu>
 
+              {canAccessModule(role, MODULES.AI_CREDITS) && <CreditBalanceChip />}
               <LanguageSwitcher />
               <button onClick={() => navigate("/app/settings")} className="rounded-lg p-2 text-ink-700 hover:bg-surface-sunk" title="Settings">
                 <LuSettings className="h-5 w-5" />

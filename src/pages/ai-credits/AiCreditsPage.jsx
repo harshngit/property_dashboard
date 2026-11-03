@@ -10,6 +10,7 @@ import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { API_BASE_URL } from "../../config/api";
 import { useSelector } from "react-redux";
 import { formatDate, formatINR } from "../../lib/format";
+import { invalidateAiWallet } from "../../components/ai/AiButton";
 
 // AI credits wallet: 1 credit = Rs 1. Every AI action (Serchi) is paid from
 // the wallet of the person who asks - staff included. Buy a pack online, or
@@ -57,11 +58,21 @@ export default function AiCreditsPage() {
         }).open();
       });
       toast.push(`${pack.totalCredits} credits added. Your GST invoice is below.`, "success");
+      invalidateAiWallet();
       reload();
     } catch (err) {
       toast.push(err.message, "error");
     } finally {
       setBuying(null);
+    }
+  };
+
+  const screenshot = async (id) => {
+    try {
+      const r = await call(`/ai-credits/topups/${id}/screenshot`);
+      window.open(r.data.url, "_blank", "noopener");
+    } catch (err) {
+      toast.push(err.message, "error");
     }
   };
 
@@ -120,7 +131,7 @@ export default function AiCreditsPage() {
               <p className="mt-2 text-xs text-ink-500">{formatINR(p.priceInr, { compact: false })} + {w.gstPercent}% GST = <span className="font-semibold text-ink-800">{formatINR(p.totalInr, { compact: false })}</span></p>
               <div className="mt-4 flex flex-col gap-2">
                 {w.paymentOnline && <button className="btn-primary" disabled={!!buying} onClick={() => buy(p)}>{buying === p.id ? "Opening payment…" : "Pay online"}</button>}
-                <button className="btn-secondary" onClick={() => setTransfer(p)}>Pay by bank transfer / UPI</button>
+                <button className="btn-outline" onClick={() => setTransfer(p)}>Pay by bank transfer / UPI</button>
               </div>
             </div>
           ))}
@@ -144,7 +155,7 @@ export default function AiCreditsPage() {
                   <tr key={t.id} className="border-b border-line last:border-0">
                     <td className={`${th} text-xs text-ink-600`}>{formatDate(t.createdAt, true)}</td>
                     <td className={th}>{t.packName} · {formatINR(t.amountInr, { compact: false })}</td>
-                    <td className={`${th} font-mono text-xs`}>{t.method.toUpperCase()} {t.reference}</td>
+                    <td className={`${th} font-mono text-xs`}>{t.method.toUpperCase()} {t.reference}{t.hasScreenshot && <button className="ml-2 font-sans font-semibold text-red-600 hover:underline" onClick={() => screenshot(t.id)}>Screenshot</button>}</td>
                     <td className={th}><span className={`rounded-full px-2 py-0.5 text-xs font-bold ${TOPUP_TONE[t.status]}`}>{t.status === "pending" ? "Being checked" : t.status === "approved" ? "Credited" : "Not accepted"}</span>{t.decisionNote && t.status === "rejected" && <span className="block text-[11px] text-ink-500">{t.decisionNote}</span>}</td>
                   </tr>
                 ))}
@@ -198,15 +209,42 @@ export default function AiCreditsPage() {
   );
 }
 
+// Bank / UPI details as the Super Admin set them (AI settings -> Payments and credit rules).
+export function PaymentDetails({ details }) {
+  const b = details?.bank || {};
+  const u = details?.upi || {};
+  const bank = b.accountName && b.accountNumber && b.ifsc;
+  if (!bank && !u.id) return <p className="mt-1 text-coral-700">Bank and UPI details are not set up yet - ask your A R Buildwel contact before paying.</p>;
+  return (
+    <dl className="mt-2 grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 text-ink-700" data-no-translate>
+      {u.id && <><dt className="text-ink-500">UPI</dt><dd className="font-mono">{u.id}{u.name ? <span className="font-sans text-ink-500"> ({u.name})</span> : null}</dd></>}
+      {bank && <>
+        <dt className="text-ink-500">Account name</dt><dd>{b.accountName}</dd>
+        <dt className="text-ink-500">Account no.</dt><dd className="font-mono">{b.accountNumber}</dd>
+        <dt className="text-ink-500">IFSC</dt><dd className="font-mono">{b.ifsc}</dd>
+        {b.bankName && <><dt className="text-ink-500">Bank</dt><dd>{b.bankName}{b.branch ? `, ${b.branch}` : ""}</dd></>}
+      </>}
+      {details.note && <dd className="col-span-2 text-xs text-ink-500">{details.note}</dd>}
+    </dl>
+  );
+}
+
 function TransferForm({ pack, details, onDone }) {
   const call = useApiCall();
   const toast = useToast();
-  const [form, setForm] = useState({ method: "upi", reference: "", paidOn: "" });
+  const [form, setForm] = useState({ method: details?.upi?.id ? "upi" : "bank", reference: "", paidOn: "" });
+  const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setBusy(true);
     try {
-      await call("/ai-credits/topups", { method: "POST", body: { packId: pack.id, method: form.method, reference: form.reference.trim(), paidOn: form.paidOn || undefined } });
+      const fd = new FormData();
+      fd.append("packId", pack.id);
+      fd.append("method", form.method);
+      fd.append("reference", form.reference.trim());
+      if (form.paidOn) fd.append("paidOn", form.paidOn);
+      if (file) fd.append("screenshot", file);
+      await call("/ai-credits/topups", { method: "POST", body: fd, isFormData: true });
       toast.push("Payment reported. We will add the credits once it is checked.", "success");
       onDone();
     } catch (err) {
@@ -219,13 +257,16 @@ function TransferForm({ pack, details, onDone }) {
     <div className="space-y-3 text-sm">
       <div className="rounded-lg bg-surface-muted p-3">
         <p className="font-semibold text-ink-900">Amount to pay: {formatINR(pack.totalInr, { compact: false })} <span className="font-normal text-ink-500">(incl. GST)</span></p>
-        {details?.upi && <p className="mt-1 text-ink-700">UPI: <span className="font-mono">{details.upi}</span></p>}
-        {details?.bank && <p className="mt-1 text-ink-700">Bank: {details.bank}</p>}
+        <PaymentDetails details={details} />
       </div>
       <SelectField label="Paid by" value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))} options={[{ value: "upi", label: "UPI" }, { value: "bank", label: "Bank transfer (NEFT / RTGS / IMPS)" }]} />
       <TextField label="UTR / transaction reference" value={form.reference} onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))} placeholder="e.g. 4211 0987 6543" />
       <TextField label="Paid on (optional)" type="date" value={form.paidOn} onChange={(e) => setForm((f) => ({ ...f, paidOn: e.target.value }))} />
-      <button className="btn-primary" disabled={busy || form.reference.trim().length < 6} onClick={submit}>{busy ? "Sending…" : "Report payment"}</button>
+      <label className="field-label">Screenshot of the payment (optional - JPG, PNG or PDF, up to 5 MB)
+        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="mt-1 block w-full text-xs" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+      </label>
+      {file && file.size > 5 * 1024 * 1024 && <p className="text-xs text-coral-700">This file is larger than 5 MB.</p>}
+      <button className="btn-primary" disabled={busy || form.reference.trim().length < 6 || (file && file.size > 5 * 1024 * 1024)} onClick={submit}>{busy ? "Sending…" : "Report payment"}</button>
     </div>
   );
 }
@@ -260,7 +301,7 @@ function Limits({ settings, onSaved }) {
         <TextField label="Daily AI limit (credits)" type="number" min="1" placeholder="No limit" value={f.dailyCap} onChange={set("dailyCap")} />
         <TextField label="Monthly AI limit (credits)" type="number" min="1" placeholder="No limit" value={f.monthlyCap} onChange={set("monthlyCap")} />
       </div>
-      <button className="btn-secondary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</button>
+      <button className="btn-outline" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save"}</button>
     </div>
   );
 }

@@ -87,7 +87,7 @@ function Areas() {
       <div className="flex flex-wrap items-end gap-2">
         <label className="field-label">City<input className="field-input mt-1 w-64" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setCity(input.trim())} placeholder="City" /></label>
         <button className="btn-primary" disabled={input.trim().length < 2} onClick={() => setCity(input.trim())}>Show areas</button>
-        {ADMIN.includes(role) && <button className="btn-secondary ml-auto" onClick={snapshot}>Take this month's snapshot</button>}
+        {ADMIN.includes(role) && <button className="btn-outline ml-auto" onClick={snapshot}>Take this month's snapshot</button>}
       </div>
       {city && (rep.loading && !rep.data ? <div className="flex justify-center py-10"><InlineSpinner className="h-6 w-6" /></div> : !rep.data?.areas?.length ? (
         <div className="card"><EmptyState title="Not enough data in this city yet" description="An area is scored once it has a few live listings or public market data." /></div>

@@ -10,8 +10,10 @@ import { useApiCall } from "../../hooks/useApi";
 //   <AiButton activity="review_screen" label="AI second opinion" run={() => call(...)} onDone={(data) => ...} />
 
 let walletCache = { at: 0, promise: null };
+// Also tells the top-bar balance chip to refresh.
 export function invalidateAiWallet() {
   walletCache = { at: 0, promise: null };
+  window.dispatchEvent(new Event("ai-credits-changed"));
 }
 
 function useWallet() {
