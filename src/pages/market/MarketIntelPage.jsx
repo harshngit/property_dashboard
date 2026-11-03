@@ -85,7 +85,7 @@ function Areas() {
         )}
       </div>
       <div className="flex flex-wrap items-end gap-2">
-        <label className="field-label">City<input className="field-input mt-1 w-64" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setCity(input.trim())} placeholder="e.g. Gurugram" /></label>
+        <label className="field-label">City<input className="field-input mt-1 w-64" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && setCity(input.trim())} placeholder="City" /></label>
         <button className="btn-primary" disabled={input.trim().length < 2} onClick={() => setCity(input.trim())}>Show areas</button>
         {ADMIN.includes(role) && <button className="btn-secondary ml-auto" onClick={snapshot}>Take this month's snapshot</button>}
       </div>

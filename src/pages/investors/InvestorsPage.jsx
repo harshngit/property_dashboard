@@ -73,7 +73,7 @@ function IrmPanel({ profileId }) {
         </div>
       )}
       <div>
-        <p className="mb-1 text-xs font-semibold text-ink-700">AI-matched live deals</p>
+        <p className="mb-1 text-xs font-semibold text-ink-700">Matched live deals</p>
         {(irm.aiMatches || []).length === 0 ? (
           <p className="text-xs text-ink-500">No live deals match yet.</p>
         ) : (
@@ -89,6 +89,7 @@ function IrmPanel({ profileId }) {
             ))}
           </ul>
         )}
+        {(irm.matchDisclaimers || []).map((d) => <p key={d.key} className="mt-2 text-[11px] text-ink-400"><b>{d.title}:</b> {d.content_html}</p>)}
       </div>
     </div>
   );

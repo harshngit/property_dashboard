@@ -161,8 +161,8 @@ export default function CampaignForm({ campaign, rateCard, advertisers, onSaved,
           <section className="space-y-3">
             <h4 className="text-sm font-bold text-ink-900">{editing ? "Audience" : "3. Audience"}</h4>
             <div className="grid gap-3 sm:grid-cols-2">
-              <TextField label="Cities (comma separated; blank = all)" placeholder="Delhi, Gurugram" value={f.cities} onChange={set("cities")} />
-              <TextField label="Localities" placeholder="Dwarka, Sector 57" value={f.localities} onChange={set("localities")} />
+              <TextField label="Cities (comma separated; blank = all)" placeholder="Cities, separated by commas" value={f.cities} onChange={set("cities")} />
+              <TextField label="Localities" placeholder="Localities, separated by commas" value={f.localities} onChange={set("localities")} />
               <TextField label="Property types" placeholder="apartment, villa, plot" value={f.propertyTypes} onChange={set("propertyTypes")} />
               <label className="block"><span className="field-label">Device</span>
                 <select id="ad-device" className="field-select" value={f.device} onChange={set("device")}><option value="all">All devices</option><option value="mobile">Mobile only</option><option value="desktop">Desktop only</option></select>

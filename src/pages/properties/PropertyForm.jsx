@@ -515,8 +515,8 @@ export default function PropertyForm({ mode = "create", property }) {
               onPlaceSelected={handlePlaceSelected}
               className="sm:col-span-2"
             />
-            <TextField label="City" placeholder="e.g. Bengaluru" value={form.city} onChange={set("city")} error={errors.city} />
-            <TextField label="Locality" placeholder="e.g. Whitefield" value={form.locality} onChange={set("locality")} />
+            <TextField label="City" placeholder="City" value={form.city} onChange={set("city")} error={errors.city} />
+            <TextField label="Locality" placeholder="Locality" value={form.locality} onChange={set("locality")} />
             <TextField label="Address (optional)" placeholder="Full address" value={form.address} onChange={set("address")} className="sm:col-span-2" />
             {mode === "create" ? (
               <TextField label="Price" placeholder={'e.g. "2.1 Cr", "Price on Request", "45,00,000"'} value={form.price} onChange={set("price")} error={errors.price} />

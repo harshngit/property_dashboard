@@ -156,7 +156,7 @@ function FieldEditor({ form, setForm, meta, states, canEdit, onSave, onPutBack, 
             <input id="fm-states" list="fm-state-list" className="field-input mt-1" value={form.states} onChange={set("states")} disabled={!canEdit} placeholder="TG, DL" />
             <datalist id="fm-state-list">{states.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}</datalist>
           </label>
-          {input("Cities (names, empty = every city)", "cities", { placeholder: "Hyderabad, Warangal" })}
+          {input("Cities (names, empty = every city)", "cities", { placeholder: "Cities, separated by commas" })}
         </div>
         <p className="mb-1.5 mt-3 text-xs font-semibold text-ink-600">Only for these roles (none ticked = everyone)</p>
         <div className="flex flex-wrap gap-x-4 gap-y-1.5">
@@ -309,7 +309,7 @@ export default function FieldManagerPage() {
               <p className="text-xs text-ink-500">Type a city to see the fields for its state. Role-limited fields follow your own role.</p>
               {entityInfo.form && <p className="mt-1 text-xs text-ink-500">Filled in on: {entityInfo.form}.</p>}
             </div>
-            <label className="field-label">City<input id="fm-preview-city" className="field-input mt-1 w-56" value={previewCity} onChange={(e) => setPreviewCity(e.target.value)} placeholder="e.g. Hyderabad" /></label>
+            <label className="field-label">City<input id="fm-preview-city" className="field-input mt-1 w-56" value={previewCity} onChange={(e) => setPreviewCity(e.target.value)} placeholder="City" /></label>
           </div>
           <DynamicFields key={`${entity}-${previewKey}`} entityType={entity} city={previewCity} values={previewValues} onChange={setPreviewValues} />
         </div>

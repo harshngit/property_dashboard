@@ -146,7 +146,7 @@ function CityPageForm({ page, onSaved, onCancel }) {
   if (!page) {
     return (
       <div className="space-y-3">
-        <label><span className="field-label">City (as in master data)</span><input className="field-input" placeholder="e.g. Gurugram" value={f.city} onChange={set("city")} /></label>
+        <label><span className="field-label">City (as in master data)</span><input className="field-input" placeholder="City" value={f.city} onChange={set("city")} /></label>
         <label><span className="field-label">Page type</span>
           <select className="field-select" value={f.pageType} onChange={set("pageType")}>{PAGE_TYPES.map((t) => <option key={t} value={t}>{titleCase(t.replace(/_/g, " "))}</option>)}</select>
         </label>

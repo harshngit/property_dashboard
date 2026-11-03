@@ -4,6 +4,7 @@ import { TextField } from "../../components/common/FormField";
 import { useToast } from "../../components/common/ToastProvider";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { titleCase } from "../../lib/format";
+import AiButton, { AiDisclaimer } from "../../components/ai/AiButton";
 
 // Full view of an institutional listing for staff / the lister: what the
 // public sees vs the confidential record, valuation intelligence (EBITDA-
@@ -19,6 +20,36 @@ function Box({ title, value, children }) {
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{title}</p>
       <p className="mt-1 font-display text-xl font-extrabold text-ink-950">{value}</p>
       <div className="mt-2 space-y-0.5 text-xs text-ink-600">{children}</div>
+    </div>
+  );
+}
+
+// #15 optional AI review of the approvals (Claude) - separate from the rule-based flags.
+function AiApprovals({ id, review: r, onDone }) {
+  const call = useApiCall();
+  return (
+    <div className="mt-3 rounded-lg border border-line p-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-ink-600">AI approvals review{r ? ` · ${new Date(r.at).toLocaleDateString()} · ${r.documentsRead?.length || 0} document(s) read` : ""}</p>
+        <AiButton activity="institutional_approvals_review" label={r ? "Review again" : "AI approvals review"} run={() => call(`/institutional/manage/listings/${id}/ai-approvals-review`, { method: "POST" })} onDone={onDone} />
+      </div>
+      {r ? (
+        <div className="mt-2 space-y-2">
+          {r.summary && <p className="text-ink-700">{r.summary}</p>}
+          {r.missingOrUnclear?.length > 0 && (
+            <ul className="space-y-1">{r.missingOrUnclear.map((x, i) => <li key={i}><span className={`mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${SEV[x.severity] || SEV.low}`}>{x.issue}</span>{x.approval}: <span className="text-ink-600">{x.detail}</span></li>)}</ul>
+          )}
+          {r.documentFindings?.length > 0 && (
+            <ul className="space-y-1 text-xs text-ink-600">{r.documentFindings.map((x, i) => <li key={i}><b>{x.document}:</b> {x.finding}</li>)}</ul>
+          )}
+          {r.questionsForSeller?.length > 0 && (
+            <div><p className="text-xs font-semibold text-ink-600">Ask the seller</p><ul className="list-disc pl-4 text-xs text-ink-600">{r.questionsForSeller.map((q, i) => <li key={i}>{q}</li>)}</ul></div>
+          )}
+          <AiDisclaimer text={r.disclaimer} />
+        </div>
+      ) : (
+        <p className="mt-1 text-xs text-ink-500">Optional: Claude reads the declared approvals and up to 3 approval documents from the data room, paid from your AI credits. The rule-based flags above stay as they are. A CA and legal counsel must verify every point.</p>
+      )}
     </div>
   );
 }
@@ -124,6 +155,7 @@ export default function InstitutionalListingDetail({ id, staff }) {
               {report.flagsNotice && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">{report.flagsNotice}</p>}
             </div>
           </div>
+          {staff && <AiApprovals id={id} review={report.aiReview} onDone={() => dd.reload()} />}
           <div className="mt-3 space-y-2">
             {report.review.map((r) => (
               <div key={r.key} className="flex flex-wrap items-center gap-2 rounded-lg border border-line px-3 py-2">

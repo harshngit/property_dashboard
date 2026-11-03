@@ -9,6 +9,7 @@ import { TextField, TextareaField } from "../../components/common/FormField";
 import { useToast } from "../../components/common/ToastProvider";
 import { buildQuery, useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate, formatINR, titleCase } from "../../lib/format";
+import AiButton, { AiDisclaimer } from "../../components/ai/AiButton";
 
 // Module 45 - Property Exchange desk (A R staff).
 //   An owner raises a request on the website. Here the representative
@@ -20,6 +21,29 @@ const th = "px-4 py-3";
 const money = (v) => (v === null || v === undefined ? "—" : formatINR(v, { compact: false }));
 const STATUS_LABEL = { open: "Open", option_chosen: "Option chosen", in_progress: "Deals in progress", closed: "Closed", cancelled: "Cancelled" };
 const Spinner = () => <div className="flex justify-center py-16 text-ink-500"><InlineSpinner className="h-6 w-6" /></div>;
+
+// #14 optional AI condition check - shown beside the estimate, never instead of it.
+function AiEstimate({ id, review: r, open, onDone }) {
+  const call = useApiCall();
+  return (
+    <div className="rounded-lg border border-line p-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-ink-900">AI-assisted indicative estimate{r ? `: ${money(r.adjustedEstimate)} (${r.adjustmentPercent > 0 ? "+" : ""}${r.adjustmentPercent}% on ${money(r.baseEstimate)})` : ""}</p>
+        {open && <AiButton activity="exchange_estimate_adjust" label={r ? "Check again" : "AI condition check"} run={() => call(`/exchange/requests/${id}/ai-estimate`, { method: "POST" })} onDone={onDone} />}
+      </div>
+      {r ? (
+        <>
+          {r.stale && <p className="mt-1 text-amber-700">The estimate has changed since this check - run it again for the current figure.</p>}
+          <p className="mt-1 text-ink-600">{titleCase(r.condition)} condition. {r.reasoning}</p>
+          {r.factors?.length > 0 && <ul className="mt-1 list-disc pl-4 text-ink-600">{r.factors.map((f, i) => <li key={i}>{f.effect === "up" ? "▲" : f.effect === "down" ? "▼" : "•"} {f.factor}: {f.note}</li>)}</ul>}
+          <AiDisclaimer text={r.disclaimer} />
+        </>
+      ) : (
+        <p className="mt-1 text-ink-500">Optional: an AI read of the property's age, floor, furnishing and description, paid from your AI credits. The estimate above stays as it is.</p>
+      )}
+    </div>
+  );
+}
 
 function Detail({ id, onChanged }) {
   const call = useApiCall();
@@ -66,6 +90,7 @@ function Detail({ id, onChanged }) {
       </div>
       {d.valuationBasis?.note && <p className="rounded-lg bg-surface-muted p-3 text-xs text-ink-700">Estimate basis: {d.valuationBasis.note}</p>}
       {d.notes && <p className="rounded-lg bg-surface-muted p-3 text-xs text-ink-700" data-no-translate>Owner's note: {d.notes}</p>}
+      {d.oldPropertyValuation > 0 && <AiEstimate id={id} review={d.guidance.aiEstimate} open={["open", "option_chosen", "in_progress"].includes(d.status)} onDone={reload} />}
 
       {waiting.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">

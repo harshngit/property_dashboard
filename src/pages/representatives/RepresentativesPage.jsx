@@ -174,8 +174,8 @@ function Reps({ admin }) {
             <SelectField label="Designation" value={editing.designation} onChange={(e) => setEditing((x) => ({ ...x, designation: e.target.value }))} options={DESIGNATIONS} />
             <TextField label="Platform number (shown to buyers and sellers)" value={editing.platform_number || ""} onChange={(e) => setEditing((x) => ({ ...x, platform_number: e.target.value }))} placeholder="+91 80000 12345" />
             <TextField label="States (codes, comma separated)" value={editing.statesText} onChange={(e) => setEditing((x) => ({ ...x, statesText: e.target.value }))} placeholder="DL, HR" />
-            <TextField label="Cities (comma separated)" value={editing.citiesText} onChange={(e) => setEditing((x) => ({ ...x, citiesText: e.target.value }))} placeholder="New Delhi, Gurugram" />
-            <TextField label="Localities (comma separated)" value={editing.localitiesText} onChange={(e) => setEditing((x) => ({ ...x, localitiesText: e.target.value }))} placeholder="Rajouri Garden, Sector 56" />
+            <TextField label="Cities (comma separated)" value={editing.citiesText} onChange={(e) => setEditing((x) => ({ ...x, citiesText: e.target.value }))} placeholder="Cities, separated by commas" />
+            <TextField label="Localities (comma separated)" value={editing.localitiesText} onChange={(e) => setEditing((x) => ({ ...x, localitiesText: e.target.value }))} placeholder="Localities, separated by commas" />
             <SelectField
               label="Team leader"
               value={editing.team_leader_id || ""}

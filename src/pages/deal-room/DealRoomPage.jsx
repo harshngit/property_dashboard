@@ -130,7 +130,7 @@ function MatchedInvestors({ propertyId }) {
   return (
     <div className="card p-5">
       <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ink-500">Matched investors</h3>
-      <p className="mb-3 text-xs text-ink-500">Verified investors ranked by fit - stated preferences, what they engage with, and deal quality.</p>
+      <p className="mb-3 text-xs text-ink-500">Verified investors ranked by rule-based fit - stated preferences, what they engage with, and deal quality. Indicative only, not investment advice; each investor decides for themselves.</p>
       {loading ? (
         <InlineSpinner />
       ) : error ? (

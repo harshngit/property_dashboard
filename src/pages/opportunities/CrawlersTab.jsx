@@ -74,7 +74,6 @@ function ConfigModal({ source, onClose, onSaved }) {
     maxPages: source.max_pages,
     defaultListingCategory: source.default_listing_category,
     requiresLegalReview: source.requires_legal_review,
-    useAiParser: source.use_ai_parser,
     // A seeded source only carries its constants - start from the example mapping, keeping them.
     config: JSON.stringify((source.config || {}).itemSelector || (source.config || {}).fields || (source.config || {}).linkSelector ? source.config : { ...exampleFor(source, source.adapter), ...(Object.keys(source.config?.constants || {}).length ? { constants: { ...(exampleFor(source, source.adapter).constants || {}), ...source.config.constants } } : {}) }, null, 2),
   });
@@ -121,7 +120,6 @@ function ConfigModal({ source, onClose, onSaved }) {
         {!reference && (
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2"><input type="checkbox" checked={f.requiresLegalReview} onChange={set("requiresLegalReview")} /> Lawyer-panel review before publishing</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={f.useAiParser} onChange={set("useAiParser")} /> AI parser for fields the mapping misses</label>
           </div>
         )}
         <label className="block">
@@ -206,7 +204,7 @@ export default function CrawlersTab() {
               <tr key={s.id} className={s.status === "dead_letter" ? "bg-red-50/40" : ""}>
                 <td className="px-4 py-2.5">
                   <p className="font-semibold text-ink-900">{s.name}</p>
-                  <p className="text-xs text-ink-500">{titleCase(s.category)}{s.output && s.output !== "opportunity" ? ` → ${OUTPUT_LABEL[s.output]}` : ""} · {s.adapter} · every {s.schedule_hours}h{s.requires_legal_review ? " · legal review" : ""}{s.use_ai_parser ? " · AI" : ""}</p>
+                  <p className="text-xs text-ink-500">{titleCase(s.category)}{s.output && s.output !== "opportunity" ? ` → ${OUTPUT_LABEL[s.output]}` : ""} · {s.adapter} · every {s.schedule_hours}h{s.requires_legal_review ? " · legal review" : ""}</p>
                 </td>
                 <td className="px-4 py-2.5">
                   <button className="text-left" onClick={() => { setApprovalNotes(s.legal_notes || ""); setApproving(s); }}>

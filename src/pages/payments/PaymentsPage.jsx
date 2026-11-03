@@ -8,8 +8,8 @@ import { useApiQuery } from "../../hooks/useApi";
 import { formatDate, formatINR, shortId, titleCase } from "../../lib/format";
 
 // Payment tracking across every deal the user can see (GET /payments,
-// GET /payments/stats). Status changes come from the gateway webhook, so
-// this screen is read-only.
+// GET /payments/stats). History only: deal payments happen off-platform (no
+// gateway, by contract); milestones are recorded on each deal.
 
 const STATUS_LABELS = { initiated: "Initiated", success: "Success", failed: "Failed", refunded: "Refunded" };
 
@@ -89,10 +89,10 @@ export default function PaymentsPage() {
         )}
         kanban={{ key: "status", columns: Object.values(STATUS_LABELS) }}
         emptyTitle="No payments recorded"
-        emptySubtitle="Payments initiated against deals will appear here."
+        emptySubtitle="No payment records."
       />
       <div className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-3 text-xs text-ink-500">
-        <LuWallet className="h-4 w-4 text-indigo-500" /> Payment gateway integration requires client KYC and merchant approval before going live.
+        <LuWallet className="h-4 w-4 text-indigo-500" /> Deal payments happen off-platform: A R Buildwel never holds customer funds. Record milestones on each deal.
       </div>
 
       <Modal open={!!viewing} onClose={() => setViewing(null)} title="Transaction details" maxWidth="max-w-lg">

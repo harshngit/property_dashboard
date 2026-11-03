@@ -1,42 +1,44 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LuSearch } from "react-icons/lu";
-import { LEADS, PROPERTIES, CUSTOMERS } from "../../data/mockData";
+import { useApiCall } from "../../hooks/useApi";
 import { MODULES, canAccessModule } from "../../config/roles";
 
+// Search across the records this user can see. Each list endpoint applies the
+// usual access rules, so nothing extra is exposed here.
 const GROUPS = [
   {
     key: MODULES.LEADS,
     label: "Leads",
-    data: LEADS,
-    match: (l, q) => l.name.toLowerCase().includes(q) || l.id.toLowerCase().includes(q) || l.property.toLowerCase().includes(q),
-    title: (l) => l.name,
-    sub: (l) => l.property,
+    path: "/leads",
+    title: (l) => l.customer_name || "Lead",
+    sub: (l) => l.property_title || l.source || "",
     to: (l) => `/app/leads/${l.id}`,
   },
   {
     key: MODULES.PROPERTIES,
     label: "Properties",
-    data: PROPERTIES,
-    match: (p, q) => p.title.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.location.toLowerCase().includes(q),
+    path: "/properties",
     title: (p) => p.title,
-    sub: (p) => p.location,
+    sub: (p) => [p.locality, p.city].filter(Boolean).join(", "),
     to: (p) => `/app/properties/${p.id}`,
   },
   {
     key: MODULES.CUSTOMERS,
     label: "Customers",
-    data: CUSTOMERS,
-    match: (c, q) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q) || c.requirement.toLowerCase().includes(q),
-    title: (c) => c.name,
-    sub: (c) => c.requirement,
-    to: () => "/app/customers",
+    path: "/customers",
+    title: (c) => c.full_name || "Customer",
+    sub: (c) => c.city || "",
+    to: (c) => `/app/customers/${c.id}`,
   },
 ];
 
 export default function GlobalSearch({ role }) {
+  const call = useApiCall();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const rootRef = useRef(null);
 
@@ -48,13 +50,34 @@ export default function GlobalSearch({ role }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return GROUPS.filter((g) => canAccessModule(role, g.key))
-      .map((g) => ({ ...g, items: g.data.filter((item) => g.match(item, q)).slice(0, 4) }))
-      .filter((g) => g.items.length > 0);
-  }, [query, role]);
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults([]);
+      setLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      const groups = GROUPS.filter((g) => canAccessModule(role, g.key));
+      const found = await Promise.all(
+        groups.map((g) =>
+          call(`${g.path}?search=${encodeURIComponent(q)}&limit=4`)
+            .then((r) => ({ ...g, items: (Array.isArray(r.data) ? r.data : r.data?.items || []).slice(0, 4) }))
+            .catch(() => ({ ...g, items: [] }))
+        )
+      );
+      if (!cancelled) {
+        setResults(found.filter((g) => g.items.length > 0));
+        setLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, role, call]);
 
   const handleSelect = (group, item) => {
     navigate(group.to(item));
@@ -64,7 +87,7 @@ export default function GlobalSearch({ role }) {
 
   return (
     <div ref={rootRef} className="relative hidden md:block">
-      <div className="flex items-center gap-2 rounded-full bg-surface-sunk px-3.5 py-2 text-sm focus-within:ring-2 focus-within:ring-red-500/20">
+      <div className="flex items-center gap-2 rounded-full bg-surface-sunk px-3.5 py-2 text-sm focus-within:ring-2 focus-within:ring-red-200">
         <LuSearch className="h-4 w-4 shrink-0 text-ink-500" />
         <input
           value={query}
@@ -75,10 +98,10 @@ export default function GlobalSearch({ role }) {
         />
       </div>
 
-      {open && query.trim() && (
-        <div className="absolute left-0 right-0 z-30 mt-2 max-h-96 overflow-y-auto rounded-xl border border-line bg-white p-1.5 shadow-pop">
+      {open && query.trim().length >= 2 && (
+        <div className="absolute left-0 right-0 z-30 mt-2 max-h-96 overflow-y-auto rounded-xl border border-line bg-white p-1 shadow-lg">
           {results.length === 0 ? (
-            <p className="px-3 py-4 text-center text-xs text-ink-500">No matches for "{query}"</p>
+            <p className="px-3 py-4 text-center text-xs text-ink-500">{loading ? "Searching…" : `No matches for "${query}"`}</p>
           ) : (
             results.map((group) => (
               <div key={group.key} className="mb-1 last:mb-0">
@@ -89,8 +112,8 @@ export default function GlobalSearch({ role }) {
                     onClick={() => handleSelect(group, item)}
                     className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left hover:bg-red-50"
                   >
-                    <span className="text-sm font-semibold text-ink-900">{group.title(item)}</span>
-                    <span className="text-xs text-ink-500">{group.sub(item)}</span>
+                    <span className="text-sm font-semibold text-ink-900" data-no-translate>{group.title(item)}</span>
+                    <span className="text-xs text-ink-500" data-no-translate>{group.sub(item)}</span>
                   </button>
                 ))}
               </div>

@@ -268,7 +268,7 @@ function IntakeQueue() {
       const p = res.data.parsed || {};
       const reader = res.data.reader || {};
       const how = reader.method === "tesseract" ? ` (OCR, ${reader.ocrPages} page${reader.ocrPages === 1 ? "" : "s"}${reader.confidence ? `, ${reader.confidence}% confidence` : ""})` : reader.method === "ai_vision" ? " (read by AI vision)" : "";
-      toast.push(`Parsed${how}${p.parsed_by_ai ? " (with AI)" : ""}: ${p.reserve_price ? formatINR(p.reserve_price) : "no reserve price"}, auction ${p.auction_date || "date not found"} - queued for review.`, "success");
+      toast.push(`Parsed${how}: ${p.reserve_price ? formatINR(p.reserve_price) : "no reserve price"}, auction ${p.auction_date || "date not found"} - queued for review.`, "success");
       setNoticeOpen(false);
       reload();
     } catch (err) {

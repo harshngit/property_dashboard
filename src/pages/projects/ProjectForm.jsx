@@ -187,7 +187,7 @@ export default function ProjectForm({ mode = "create", project }) {
                 error={errors.builderId}
               />
             )}
-            <TextField label="City" placeholder="e.g. Pune" value={form.city} onChange={set("city")} error={errors.city} />
+            <TextField label="City" placeholder="City" value={form.city} onChange={set("city")} error={errors.city} />
             <TextField label="Locality" placeholder="e.g. Baner" value={form.locality} onChange={set("locality")} />
             <TextField label="Address (optional)" placeholder="Full address" value={form.address} onChange={set("address")} className="sm:col-span-2" />
           </div>
