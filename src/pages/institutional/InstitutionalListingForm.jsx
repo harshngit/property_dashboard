@@ -11,7 +11,7 @@ import { useApiCall } from "../../hooks/useApi";
 // or rooms otherwise).
 
 const blank = {
-  institutionName: "", assetClass: "k12_school", subType: "", boardAffiliation: "", yearEstablished: "", city: "", locality: "", address: "", latitude: "", longitude: "",
+  institutionName: "", assetClass: "k12_school", subType: "", boardAffiliation: "", yearEstablished: "", city: "", locality: "", address: "", pincode: "", latitude: "", longitude: "",
   campusAreaAcres: "", campusAreaSqft: "", builtUpAreaSqft: "", buildingCount: "", infrastructure: "", studentEnrollment: "", facultyCount: "", capacityUnits: "",
   nocStatus: "not_applicable", landOwnership: "owned", dealType: "full_sale", askingPriceCr: "", annualRevenueCr: "", ebitdaCr: "", approvals: [], enrollmentHistory: [], isConfidential: true,
 };
@@ -33,7 +33,7 @@ export default function InstitutionalListingForm({ listing, meta, onCancel, onSa
     const numeric = ["yearEstablished", "latitude", "longitude", "campusAreaAcres", "campusAreaSqft", "builtUpAreaSqft", "buildingCount", "studentEnrollment", "facultyCount", "capacityUnits", "askingPriceCr", "annualRevenueCr", "ebitdaCr"];
     const body = { ...f };
     for (const k of numeric) body[k] = body[k] === "" || body[k] === null ? undefined : Number(body[k]);
-    for (const k of ["subType", "boardAffiliation", "locality", "address", "infrastructure"]) if (!body[k]) body[k] = listing ? null : undefined;
+    for (const k of ["subType", "boardAffiliation", "locality", "address", "infrastructure", "pincode"]) if (!body[k]) body[k] = listing ? null : undefined;
     body.approvals = f.approvals.filter((a) => a.name.trim());
     body.enrollmentHistory = f.enrollmentHistory.filter((e) => e.year && e.count !== "").map((e) => ({ year: Number(e.year), count: Number(e.count) }));
     // Acres is the field people fill; let the server derive sq ft from it.
@@ -68,7 +68,9 @@ export default function InstitutionalListingForm({ listing, meta, onCancel, onSa
         <TextField label="Locality" value={f.locality} onChange={set("locality")} />
         <TextField label="Latitude" type="number" value={f.latitude} onChange={set("latitude")} />
         <TextField label="Longitude" type="number" value={f.longitude} onChange={set("longitude")} />
-        <div className="sm:col-span-4"><TextField label="Address" value={f.address} onChange={set("address")} /></div>
+        <TextField label="Pincode" value={f.pincode} onChange={set("pincode")} placeholder="If the map is not available" />
+        <div className="sm:col-span-3"><TextField label="Address" value={f.address} onChange={set("address")} /></div>
+        <p className="text-xs text-ink-500 sm:col-span-4">Give the latitude and longitude, or just the 6-digit pincode if the map is not working - the campus is then placed from the pincode and can be pinned exactly later.</p>
       </div>
 
       <H>Campus and people</H>
@@ -126,7 +128,7 @@ export default function InstitutionalListingForm({ listing, meta, onCancel, onSa
 
       <div className="flex justify-end gap-2 pt-2">
         <button className="btn-outline" onClick={onCancel}>Cancel</button>
-        <button className="btn-primary" disabled={busy || !f.institutionName.trim() || !f.city.trim() || f.latitude === "" || f.longitude === "" || !(Number(f.askingPriceCr) > 0)} onClick={save}>{busy ? "Saving…" : "Save listing"}</button>
+        <button className="btn-primary" disabled={busy || !f.institutionName.trim() || !f.city.trim() || ((f.latitude === "" || f.longitude === "") && !/^\d{6}$/.test(f.pincode || "")) || !(Number(f.askingPriceCr) > 0)} onClick={save}>{busy ? "Saving…" : "Save listing"}</button>
       </div>
     </div>
   );

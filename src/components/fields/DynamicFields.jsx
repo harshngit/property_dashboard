@@ -181,6 +181,12 @@ function Input({ field, value, onChange }) {
           <button type="button" className="btn-outline btn-sm" onClick={here}>Use my location</button>
           {g.lat && g.lng ? <a className="text-xs font-semibold text-red-600" href={`https://www.google.com/maps/search/?api=1&query=${g.lat},${g.lng}`} target="_blank" rel="noreferrer">Check on the map</a> : null}
         </div>
+        {/* Sec. 25.5.2: if the map or location does not work, a pincode is enough - the pin is placed later. */}
+        <label className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
+          No map? Pincode
+          <input className="field-input w-28" inputMode="numeric" maxLength={6} placeholder="6 digits" value={g.pincode ?? ""} onChange={(e) => onChange({ ...g, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })} />
+          {g.pending ? <span>The exact location will be placed from the pincode.</span> : g.approximate ? <span>Placed at the pincode centre - drop the pin for the exact spot.</span> : null}
+        </label>
         </div>
       );
     }

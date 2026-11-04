@@ -4,7 +4,7 @@ import {
   LuFileStack, LuWallet, LuMessageCircle, LuSparkles, LuChartColumn,
   LuListChecks, LuSettings, LuShieldCheck, LuNetwork, LuLandmark,
   LuGavel, LuGlobe, LuBriefcase, LuNewspaper, LuDatabase,
-  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints, LuScrollText, LuUserCheck, LuBellRing, LuInbox, LuMessagesSquare, LuSchool, LuMegaphone, LuTrophy, LuLanguages, LuMessageSquareText, LuKeyRound, LuArrowLeftRight, LuMapPinned, LuFilePenLine,
+  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints, LuScrollText, LuUserCheck, LuBellRing, LuInbox, LuMessagesSquare, LuSchool, LuMegaphone, LuTrophy, LuLanguages, LuMessageSquareText, LuKeyRound, LuArrowLeftRight, LuMapPinned, LuFilePenLine, LuAward, LuGauge,
 } from "react-icons/lu";
 import { MODULES } from "./roles";
 
@@ -69,6 +69,7 @@ export const NAV_ITEMS = [
   { key: MODULES.MARKET_INTEL, label: "Market intelligence", to: "/app/market-intelligence", icon: LuChartColumn, group: "insights" },
   { key: MODULES.MANDATES, label: "Mandates", to: "/app/mandates", icon: LuScrollText, group: "listings" },
   { key: MODULES.REPRESENTATIVES, label: "Representatives", to: "/app/representatives", icon: LuUserCheck, group: "network" },
+  { key: MODULES.INCENTIVES, label: "Incentives", to: "/app/incentives", icon: LuAward, group: "network" },
   { key: MODULES.LEAD_SOURCES, label: "Lead Sources", to: "/app/lead-sources", icon: LuInbox, group: "sales" },
   { key: MODULES.CHAT_INTAKE, label: "Chat listings", to: "/app/chat-intake", icon: LuMessagesSquare, group: "sales" },
   { key: MODULES.INVOICES, label: "Invoice Centre", to: "/app/invoices", icon: LuReceipt, group: "finance" },
@@ -93,6 +94,7 @@ export const NAV_ITEMS = [
   { key: MODULES.CONTENT, label: "Website Content", to: "/app/content", icon: LuNewspaper, group: "insights" },
   { key: MODULES.DEVELOPER, label: "API & Webhooks", to: "/app/developer", icon: LuKeyRound, group: "admin" },
   { key: MODULES.LANGUAGES, label: "Languages", to: "/app/languages", icon: LuLanguages, group: "admin" },
+  { key: MODULES.STATUS_ADMIN, label: "Platform status", to: "/app/status", icon: LuGauge, group: "admin" },
   { key: MODULES.ADMIN_PANEL, label: "Admin Panel", to: "/app/admin", icon: LuDatabase, group: "admin" },
   { key: MODULES.SETTINGS, label: "Settings", to: "/app/settings", icon: LuSettings, group: "admin" },
 ];

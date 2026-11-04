@@ -6,6 +6,7 @@ import { InlineSpinner } from "../../components/common/PageLoader";
 import { useToast } from "../../components/common/ToastProvider";
 import { useApiCall, useApiQuery } from "../../hooks/useApi";
 import { formatDate, titleCase } from "../../lib/format";
+import ManualEntryQueue from "./ManualEntryQueue";
 
 // Section 23 crawler health dashboard (admin): every crawler source from the
 // contract, its legal approval, configuration, status, runs and dead-letter
@@ -189,6 +190,7 @@ export default function CrawlersTab() {
           <div key={l} className="card p-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">{l}</p><p className="mt-1 text-xl font-bold text-ink-950">{v ?? "—"}</p></div>
         ))}
       </div>
+      <ManualEntryQueue />
       <p className="text-xs text-ink-500">Last 24 hours: {h.runs_24h ?? 0} runs · {h.items_24h ?? 0} records found · {h.failed_24h ?? 0} failed runs.</p>
 
       <div className="card overflow-x-auto">

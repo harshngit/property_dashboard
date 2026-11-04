@@ -171,7 +171,7 @@ export default function AiCreditsPage() {
           <div className="card divide-y divide-line">
             {w.invoices.map((i) => (
               <div key={i.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
-                <span><span className="font-mono text-xs font-semibold text-ink-900">{i.invoiceNumber}</span> <span className="text-ink-600">· {i.packName} · {i.credits} credits · {formatINR(i.totalInr, { compact: false })} · {formatDate(i.paidAt)}</span>{i.status === "refunded" && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{i.refundedCredits} refunded</span>}</span>
+                <span><span className="font-mono text-xs font-semibold text-ink-900">{i.invoiceNumber}</span> <span className="text-ink-600">· {i.packName} · {i.credits} credits · {formatINR(i.totalInr, { compact: false })} · {formatDate(i.paidAt)}</span>{i.status === "refunded" && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">{i.refundedCredits} refunded{i.refundInr != null ? ` · ${formatINR(i.refundInr, { compact: false })} ${i.refundStatus === "processed" ? "returned" : "on its way back"}` : ""}</span>}</span>
                 <button className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline" onClick={() => invoice(i.id, i.invoiceNumber)}><LuDownload className="h-3.5 w-3.5" /> PDF</button>
               </div>
             ))}

@@ -81,6 +81,6 @@ export default function MapPicker({ value, onChange }) {
     map.current.setView([lat, lng], Math.max(map.current.getZoom(), 15));
   }, [lat, lng, has]);
 
-  if (failed) return <p className="text-xs text-[#6B7280]">The map could not be loaded here - enter the latitude and longitude, or use your location.</p>;
+  if (failed) return <p className="text-xs text-[#6B7280]">The map could not be loaded here - enter the latitude and longitude, use your location, or just give the pincode below.</p>;
   return <div ref={box} style={{ height: 240, borderRadius: 12, border: "1px solid #e5e7eb", zIndex: 0 }} aria-label="Map: click to set the location" />;
 }

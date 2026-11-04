@@ -120,7 +120,7 @@ function Reps({ admin }) {
             {rows.map((r) => (
               <tr key={r.user_id} className={r.status !== "active" ? "opacity-50" : ""}>
                 <td className="px-4 py-3">
-                  <p className="font-semibold text-ink-900">{r.full_name}</p>
+                  <p className="font-semibold text-ink-900">{r.full_name}{r.em_code && <span className="ml-2 font-mono text-[11px] font-normal text-ink-500">{r.em_code}</span>}</p>
                   <p className="text-xs text-ink-500">{r.email}{r.status !== "active" ? ` · ${r.status}` : ""}</p>
                 </td>
                 <td className="px-4 py-3 text-xs">

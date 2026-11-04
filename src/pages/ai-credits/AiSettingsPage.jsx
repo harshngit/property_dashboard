@@ -21,7 +21,7 @@ const USD = (n) => `$${Number(n || 0).toFixed(Number(n) < 1 ? 4 : 2)}`;
 function ActivityEditor({ a, models, onSaved, onClose }) {
   const call = useApiCall();
   const toast = useToast();
-  const [f, setF] = useState({ provider: a.provider, model: a.model, fallbackProvider: a.fallbackProvider || "", fallbackModel: a.fallbackModel || "", effort: a.effort, maxOutputTokens: a.maxOutputTokens, credits: a.credits, active: a.active });
+  const [f, setF] = useState({ provider: a.provider, model: a.model, fallbackProvider: a.fallbackProvider || "", fallbackModel: a.fallbackModel || "", effort: a.effort, maxOutputTokens: a.maxOutputTokens, credits: a.credits, active: a.active, audience: a.audience || "customer" });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
   const modelsOf = (p) => models.filter((m) => (p === "claude" ? m.startsWith("claude") : !m.startsWith("claude")));
@@ -56,6 +56,7 @@ function ActivityEditor({ a, models, onSaved, onClose }) {
         {select("Effort (Claude)", "effort", ["low", "medium", "high", "xhigh", "max"])}
         <label className="field-label">Longest reply (tokens)<input className="field-input mt-1" type="number" min="50" max="64000" value={f.maxOutputTokens} onChange={set("maxOutputTokens")} /></label>
         <label className="field-label">Credits per use, paid by the asking user (1 credit = Rs 1)<input className="field-input mt-1" type="number" min="0" value={f.credits} onChange={set("credits")} /></label>
+        {select("Shown in the website price list", "audience", [{ value: "customer", label: "Yes - customers ask for it" }, { value: "staff", label: "No - CRM staff tool" }])}
       </div>
       <label className="flex items-center gap-2 text-sm font-semibold text-ink-800"><input type="checkbox" className="h-4 w-4 accent-red-600" checked={!!f.active} onChange={set("active")} /> Switched on</label>
       <div className="flex justify-end gap-2">
@@ -192,15 +193,29 @@ function TopupQueue({ onDone }) {
   );
 }
 
+const REFUND_STATUS = { processing: "Refund with Razorpay", processed: "Money returned", failed: "Razorpay refund failed - send it by hand", manual_pending: "Money to send back" };
+
 function Purchases({ purchases, onDone }) {
   const call = useApiCall();
   const toast = useToast();
   const refund = async (p) => {
-    const note = window.prompt(`Refund the ${p.unusedCredits} unused credits of ${p.receiptNumber}? Give the reason (the money itself is returned by finance).`);
+    const online = p.gateway === "razorpay";
+    const note = window.prompt(`Refund the ${p.unusedCredits} unused credits of ${p.receiptNumber}? ${online ? "The money goes back to the buyer through Razorpay." : "Finance then sends the money back by bank / UPI and records the reference here."} Give the reason.`);
     if (!note) return;
     try {
       const r = await call(`/ai-credits/admin/purchases/${p.id}/refund`, { method: "POST", body: { note } });
-      toast.push(`${r.data.refundedCredits} credits taken back - refund Rs ${r.data.refundInr}.`, "success");
+      toast.push(r.data.refundStatus === "manual_pending" ? `${r.data.refundedCredits} credits taken back. Send Rs ${r.data.refundInr} back by bank / UPI, then record the reference.` : `${r.data.refundedCredits} credits taken back. Rs ${r.data.refundInr} is being refunded through Razorpay.`, "success");
+      onDone();
+    } catch (err) {
+      toast.push(err.message, "error");
+    }
+  };
+  const recordSent = async (p) => {
+    const reference = window.prompt(`Rs ${p.refundInr} sent back to ${p.userName}? Give the bank / UPI reference (UTR) of the refund.`);
+    if (!reference) return;
+    try {
+      await call(`/ai-credits/admin/purchases/${p.id}/refund-paid`, { method: "POST", body: { reference } });
+      toast.push("Refund recorded as sent.", "success");
       onDone();
     } catch (err) {
       toast.push(err.message, "error");
@@ -220,8 +235,11 @@ function Purchases({ purchases, onDone }) {
               <td className={th}>{p.packName} · {p.credits} credits<span className="block text-xs text-ink-500">{formatINR(p.totalInr, { compact: false })}</span></td>
               <td className={`${th} font-mono text-xs`}>{p.invoiceNumber || "—"}</td>
               <td className={`${th} text-xs`}>{p.gateway}{p.reference ? ` · ${p.reference}` : ""}</td>
-              <td className={th}>{p.status === "refunded" ? <span className="text-xs text-ink-500">Refunded {p.refundedCredits} (Rs {p.refundInr})</span> : p.unusedCredits ?? "—"}</td>
-              <td className={`${th} text-right`}>{p.status === "paid" && p.unusedCredits > 0 && <button className="btn-outline btn-sm" onClick={() => refund(p)}>Refund unused</button>}</td>
+              <td className={th}>{p.status === "refunded" ? <span className="text-xs text-ink-500">Refunded {p.refundedCredits} (Rs {p.refundInr})<span className={`block font-semibold ${p.refundStatus === "processed" ? "text-emerald-700" : p.refundStatus === "failed" ? "text-red-600" : "text-amber-700"}`}>{REFUND_STATUS[p.refundStatus] || "Money to send back"}{p.refundReference ? ` · ${p.refundReference}` : ""}</span>{p.refundError && <span className="block text-red-600">{p.refundError}</span>}</span> : p.unusedCredits ?? "—"}</td>
+              <td className={`${th} text-right`}>
+                {p.status === "paid" && p.unusedCredits > 0 && <button className="btn-outline btn-sm" onClick={() => refund(p)}>Refund unused</button>}
+                {p.status === "refunded" && ["manual_pending", "failed"].includes(p.refundStatus) && <button className="btn-outline btn-sm" onClick={() => recordSent(p)}>Record money sent</button>}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -358,7 +376,7 @@ export default function AiSettingsPage() {
           <tbody>
             {data.activities.map((a) => (
               <tr key={a.key} className={`border-b border-line last:border-0 ${a.active ? "" : "opacity-50"}`}>
-                <td className={th}><span className="font-semibold text-ink-900">{a.label}</span><span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${a.tier === "important" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{a.tier}</span></td>
+                <td className={th}><span className="font-semibold text-ink-900">{a.label}</span><span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${a.tier === "important" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{a.tier}</span>{a.audience === "staff" && <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-700">CRM only</span>}</td>
                 <td className={`${th} font-mono text-xs`}>{a.model}</td>
                 <td className={`${th} font-mono text-xs text-ink-500`}>{a.fallbackModel || "—"}</td>
                 <td className={`${th} text-xs`}>{price(a.model) ? `$${price(a.model).input} in / $${price(a.model).output} out` : "—"}</td>

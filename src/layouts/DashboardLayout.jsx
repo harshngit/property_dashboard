@@ -16,6 +16,7 @@ import PageLoader from "../components/common/PageLoader";
 import GlobalSearch from "../components/common/GlobalSearch";
 import NotificationBell from "../components/common/NotificationBell";
 import CreditBalanceChip from "../components/ai/CreditBalanceChip";
+import StatusBanner from "../components/common/StatusBanner";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import { PageTitleProvider, usePageTitle } from "../context/PageTitleContext";
 import { useSiteContent } from "../context/SiteConfigContext";
@@ -300,6 +301,7 @@ function DashboardShell() {
           )}
           <div className="mx-auto max-w-[1600px] animate-rise">
             <SiteAnnouncement />
+            <div className="mb-4 empty:hidden"><StatusBanner /></div>
             <Outlet />
           </div>
         </main>
