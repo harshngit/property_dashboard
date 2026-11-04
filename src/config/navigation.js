@@ -4,7 +4,7 @@ import {
   LuFileStack, LuWallet, LuMessageCircle, LuSparkles, LuChartColumn,
   LuListChecks, LuSettings, LuShieldCheck, LuNetwork, LuLandmark,
   LuGavel, LuGlobe, LuBriefcase, LuNewspaper, LuDatabase,
-  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints, LuScrollText, LuUserCheck, LuBellRing, LuInbox, LuMessagesSquare, LuSchool, LuMegaphone, LuTrophy, LuLanguages, LuMessageSquareText, LuKeyRound, LuArrowLeftRight, LuMapPinned, LuFilePenLine, LuAward, LuGauge,
+  LuKanban, LuActivity, LuSearch, LuChartPie, LuFlame, LuShieldAlert, LuScale, LuBrainCircuit, LuReceipt, LuWaypoints, LuScrollText, LuUserCheck, LuBellRing, LuInbox, LuMessagesSquare, LuSchool, LuMegaphone, LuTrophy, LuLanguages, LuMessageSquareText, LuKeyRound, LuArrowLeftRight, LuMapPinned, LuFilePenLine, LuAward, LuGauge, LuUsersRound,
 } from "react-icons/lu";
 import { MODULES } from "./roles";
 
@@ -82,6 +82,7 @@ export const NAV_ITEMS = [
   { key: MODULES.BUSINESS_LEADS, label: "Business Leads", to: "/app/business-leads", icon: LuBriefcase, group: "sales" },
   { key: MODULES.REWARDS, label: "Rewards & Leaderboard", to: "/app/rewards", icon: LuTrophy, group: "finance" },
   { key: MODULES.ADVERTISING, label: "Advertising", to: "/app/advertising", icon: LuMegaphone, group: "insights" },
+  { key: MODULES.AUDIENCES, label: "Audiences", to: "/app/audiences", icon: LuUsersRound, group: "insights" },
   { key: MODULES.TASKS, label: "Tasks & Follow-ups", to: "/app/tasks", icon: LuListChecks, group: "overview" },
   { key: MODULES.TEMPLATES, label: "Document Templates", to: "/app/templates", icon: LuFilePenLine, group: "documents" },
   { key: MODULES.DOCUMENTS, label: "Documents", to: "/app/documents", icon: LuFileStack, group: "documents" },

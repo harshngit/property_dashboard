@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LuTrophy, LuFlame, LuMedal } from "react-icons/lu";
 import PageHeader from "../../components/common/PageHeader";
 import Modal from "../../components/common/Modal";
@@ -86,7 +86,14 @@ function Board({ staff, admin }) {
   const [city, setCity] = useState("");
   const [period, setPeriod] = useState("month");
   const [audience, setAudience] = useState("professional");
-  const cities = useApiQuery("/gamification/cities");
+  // The 200 busiest cities; typing searches the rest.
+  const [cityQ, setCityQ] = useState("");
+  const [cityTerm, setCityTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setCityTerm(cityQ.trim()), 300);
+    return () => clearTimeout(t);
+  }, [cityQ]);
+  const cities = useApiQuery(`/gamification/cities${cityTerm ? `?q=${encodeURIComponent(cityTerm)}` : ""}`);
   const ready = scope === "platform" || city;
   const { data, loading, reload } = useApiQuery(ready ? `/gamification/leaderboard${buildQuery({ scope, city: scope === "area" ? city : undefined, period, audience: staff ? audience : undefined })}` : null);
   const [adjust, setAdjust] = useState(null);
@@ -111,6 +118,7 @@ function Board({ staff, admin }) {
         <div className="flex gap-1 rounded-lg bg-surface-muted p-1">
           {[["platform", "Platform-wide"], ["area", "By city"]].map(([k, l]) => <button key={k} onClick={() => setScope(k)} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${scope === k ? "bg-white text-ink-950 shadow-sm" : "text-ink-500"}`}>{l}</button>)}
         </div>
+        {scope === "area" && <input className="field-input h-9 w-40" placeholder="Find a city" value={cityQ} onChange={(e) => setCityQ(e.target.value)} aria-label="Find a city" />}
         {scope === "area" && (
           <select id="board-city" data-no-translate className="field-select h-9 w-52" value={city} onChange={(e) => setCity(e.target.value)}>
             <option value="">Choose a city</option>

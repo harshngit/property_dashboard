@@ -62,6 +62,7 @@ import PartnerDeskPage from "./pages/partner-desk/PartnerDeskPage";
 import AiCreditsPage from "./pages/ai-credits/AiCreditsPage";
 import AiSettingsPage from "./pages/ai-credits/AiSettingsPage";
 import IncentivesPage from "./pages/incentives/IncentivesPage";
+import AudiencesPage from "./pages/audiences/AudiencesPage";
 import StatusPage from "./pages/status/StatusPage";
 import CouponsPage from "./pages/coupons/CouponsPage";
 import SuspensionsPage from "./pages/suspensions/SuspensionsPage";
@@ -265,6 +266,10 @@ export default function App() {
 
           <Route element={<ModuleGuard moduleKey={MODULES.INCENTIVES} />}>
             <Route path="incentives" element={<IncentivesPage />} />
+          </Route>
+
+          <Route element={<ModuleGuard moduleKey={MODULES.AUDIENCES} />}>
+            <Route path="audiences" element={<AudiencesPage />} />
           </Route>
 
           <Route element={<ModuleGuard moduleKey={MODULES.STATUS_ADMIN} />}>

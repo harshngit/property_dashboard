@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { LuFlame, LuStar, LuShare2, LuSend, LuPlay, LuCheck, LuX } from "react-icons/lu";
+import { LuFlame, LuStar, LuShare2, LuSend, LuPlay, LuCheck, LuX, LuHandshake } from "react-icons/lu";
+import { Link } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
 import Modal from "../../components/common/Modal";
 import MatchBadge from "../../components/common/MatchBadge";
@@ -22,6 +23,7 @@ import { formatDate, formatINR, titleCase } from "../../lib/format";
 //     matches by tier, behaviour events, A/B test and job controls.
 
 const ADMIN = ["admin", "super_admin"];
+const COBROKE_STATUS = { proposed: "Proposed", countered: "Counter-offer", accepted: "Agreed", deal_open: "Deal open" };
 const COMPONENT_LABELS = { location: "Location", budget: "Budget", type: "Type", area: "Area / size", amenities: "Amenities" };
 
 function Tag({ tone, icon: Icon, children }) {
@@ -48,6 +50,10 @@ function Marketplace() {
   const [note, setNote] = useState("");
   const partners = useApiQuery(sharing ? "/matching/partners" : null);
   const [busy, setBusy] = useState(null);
+  // Co-broking on a buyer requirement (Engine 4): you bring the listing, the holding broker keeps the buyer.
+  const [cobroking, setCobroking] = useState(null);
+  const [cbShare, setCbShare] = useState("");
+  const [cbNote, setCbNote] = useState("");
 
   const run = async (key, fn, msg) => {
     setBusy(key);
@@ -121,6 +127,7 @@ function Marketplace() {
                       {r.hot && <Tag tone="red" icon={LuFlame}>Hot requirement</Tag>}
                       {r.priority && <Tag tone="indigo" icon={LuStar}>Priority buyer</Tag>}
                       {r.sharedWithMe && <Tag tone="green">Shared with you · {r.sharedWithMe}</Tag>}
+                      {r.cobroke?.status && <Tag tone="indigo" icon={LuHandshake}>Co-broking · {COBROKE_STATUS[r.cobroke.status] || titleCase(r.cobroke.status)}</Tag>}
                       <span className="text-xs text-ink-500">posted {formatDate(r.postedAt)}</span>
                     </div>
                   </td>
@@ -155,6 +162,11 @@ function Marketplace() {
                           <LuSend className="h-3.5 w-3.5" /> Send
                         </button>
                       )}
+                      {r.cobroke?.canPropose && (
+                        <button className="btn-outline btn-sm" title="Propose to work this buyer together with the broker who holds them" onClick={() => { setCobroking(r); setCbShare(""); setCbNote(""); }}>
+                          <LuHandshake className="h-3.5 w-3.5" /> Co-broke
+                        </button>
+                      )}
                       <button className="btn-outline btn-sm" title="Share with a partner broker" onClick={() => { setSharing(r); setPartner(""); setNote(""); }}>
                         <LuShare2 className="h-3.5 w-3.5" /> Share
                       </button>
@@ -166,6 +178,36 @@ function Marketplace() {
           </table>
         </div>
       )}
+
+      <Modal open={!!cobroking} onClose={() => setCobroking(null)} title="Propose co-broking" description="You bring the listing, the broker who holds this buyer keeps them. They see your proposal and can accept, decline or counter the split.">
+        {cobroking && (
+          <div className="space-y-4">
+            <p className="rounded-xl bg-surface-muted p-3 text-sm text-ink-700">
+              {cobroking.purpose === "rent" ? "Rent" : "Buy"} · {titleCase(cobroking.propertyType) || "Any property"} · {[...(cobroking.localities || []), cobroking.city].join(", ")} · {cobroking.budgetDisplay}
+            </p>
+            <label className="block text-xs font-semibold text-ink-600">
+              My share of the brokers' commission, % (optional)
+              <input className="field-input mt-1 w-full" type="number" min="1" max="99" step="0.5" value={cbShare} onChange={(e) => setCbShare(e.target.value)} placeholder="Leave empty for the standard split" />
+            </label>
+            <TextareaField label="Note (optional, no phone numbers or emails)" rows={3} value={cbNote} onChange={(e) => setCbNote(e.target.value)} />
+            <div className="flex items-center justify-between gap-2">
+              <Link to="/app/broker-network" className="text-xs font-semibold text-ink-600 underline">My co-broking</Link>
+              <div className="flex gap-2">
+                <button className="btn-outline" onClick={() => setCobroking(null)}>Cancel</button>
+                <button
+                  className="btn-primary"
+                  disabled={busy === "cobroke" || (cbShare !== "" && !(Number(cbShare) > 0 && Number(cbShare) < 100))}
+                  onClick={() =>
+                    run("cobroke", () => call("/cobroke", { method: "POST", body: { requirementId: cobroking.id, myShare: cbShare === "" ? null : Number(cbShare), note: cbNote.trim() || null } }), "Co-broking proposal sent.").then((ok) => ok && setCobroking(null))
+                  }
+                >
+                  Send proposal
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={!!sharing} onClose={() => setSharing(null)} title="Share requirement" description="Mandate-verification routing - the partner broker sees this requirement in their marketplace.">
         <div className="space-y-4">
